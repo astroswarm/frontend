@@ -1,0 +1,5 @@
+{
+  "env": {
+    "ELM_COMPILE": "elm-make Main.elm --output main.js --warn --yes"
+  }
+}
