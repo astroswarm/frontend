@@ -1,5 +1,6 @@
 {
   "env": {
-    "ELM_COMPILE": "elm-make Main.elm --output main.js --warn --yes"
+    "ELM_COMPILE": "elm-make Main.elm --output main.js --warn --yes",
+    "ELM_VERSION": "0.18"
   }
 }
