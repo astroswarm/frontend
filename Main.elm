@@ -15,10 +15,6 @@ import Maybe
 
 -- Model
 
-type alias Flags =
-  {
-    hostname : String
-  }
 type alias Service =
   {
     name : String,
@@ -28,7 +24,6 @@ type alias Model =
   {
     services : List Service,
     selected_service_name : String,
-    hostname : String,
     uploaded_log_url : String,
     navbarState : Bootstrap.Navbar.State,
     uploadLogsModalState : Bootstrap.Modal.State,
@@ -37,8 +32,8 @@ type alias Model =
 
 -- Model Initialization
 
-initialState : Flags -> (Model, Cmd Msg)
-initialState {hostname} =
+initialState : (Model, Cmd Msg)
+initialState =
   let
     (navbarState, navbarCmd) =
       Bootstrap.Navbar.initialState NavbarMsg
@@ -52,7 +47,6 @@ initialState {hostname} =
             Service "Open Sky Imager (Camera Controller)" 6103
           ],
          selected_service_name = "Lin Guider (Autoguider)",
-         hostname = hostname,
          uploaded_log_url = "",
          navbarState = navbarState,
          uploadLogsModalState = Bootstrap.Modal.hiddenState,
@@ -120,7 +114,7 @@ uploadLogs model =
         ]
       ))]
       |> Http.jsonBody
-    url = "http://" ++ model.hostname ++ ":8001/api/execute_command"
+    url = "http://localhost:8001/api/execute_command"
   in
     Http.post url body logsUploadedDecoder
       |> Http.send LogsUploaded
@@ -211,7 +205,7 @@ view model =
     viewServiceEmbed =
       Html.iframe [
         Html.Attributes.src(
-          "http://" ++ model.hostname ++ ":6080/vnc_auto.html?host=" ++ model.hostname ++ "&port=" ++ (
+          "http://localhost:6080/vnc_auto.html?host=localhost&port=" ++ (
             List.filter (\n -> n.name == model.selected_service_name) model.services
               |> List.map .websockify_port
               |> List.head
@@ -238,9 +232,9 @@ subscriptions model =
   Bootstrap.Navbar.subscriptions model.navbarState NavbarMsg
 
 
-main : Program Flags Model Msg
+main : Program Never Model Msg
 main =
-  Html.programWithFlags
+  Html.program
     {
       init = initialState,
       view = view,
