@@ -8,17 +8,17 @@ import Bootstrap.Button
 import Bootstrap.CDN
 import Bootstrap.Modal
 import Bootstrap.Navbar
-import Bootstrap.Table
 import Html
 import Html.Attributes
-import Html.Events
 import Http
 import Json.Decode
 import Json.Encode
 import Maybe
 import Navigation
 import UrlParser exposing ((</>))
+import AstrolabActivator
 import ViewAbout
+import ViewNavigation
 
 
 -- Route
@@ -213,46 +213,6 @@ uploadLogs model =
 view : Model -> Html.Html Msg
 view model =
     let
-        viewNavbar =
-            Html.div []
-                [ Bootstrap.Navbar.config NavbarMsg
-                    |> Bootstrap.Navbar.withAnimation
-                    |> Bootstrap.Navbar.brand [ Html.Attributes.href "#" ] [ Html.text "AstroSwarm" ]
-                    |> Bootstrap.Navbar.items
-                        [ Bootstrap.Navbar.itemLink
-                            [ Html.Attributes.href "#" ]
-                            [ Html.text "About" ]
-                        , Bootstrap.Navbar.itemLink
-                            [ Html.Attributes.href "#activate" ]
-                            [ Html.text "Activate Your Astrolab" ]
-                        , Bootstrap.Navbar.dropdown
-                            { id = "serviceSelect"
-                            , toggle = Bootstrap.Navbar.dropdownToggle [] [ Html.text model.selected_service_name ]
-                            , items =
-                                (List.filter (\service -> service.name /= model.selected_service_name) model.services
-                                    |> List.map
-                                        (\service ->
-                                            if service.name == model.selected_service_name then
-                                                Bootstrap.Navbar.dropdownItem [] [ Html.text service.name ]
-                                            else
-                                                Bootstrap.Navbar.dropdownItem [ Html.Events.onClick (ServiceSelect service.name) ] [ Html.text service.name ]
-                                        )
-                                )
-                            }
-                        , Bootstrap.Navbar.dropdown
-                            { id = "getHelp"
-                            , toggle = Bootstrap.Navbar.dropdownToggle [] [ Html.text "Get Help" ]
-                            , items =
-                                [ Bootstrap.Navbar.dropdownItem
-                                    [ Html.Events.onClick (UploadLogsModalMsg Bootstrap.Modal.visibleState)
-                                    ]
-                                    [ Html.text "Upload Logs" ]
-                                ]
-                            }
-                        ]
-                    |> Bootstrap.Navbar.view model.navbarState
-                ]
-
         viewUploadLogs =
             Html.div []
                 [ if String.length (model.uploaded_log_url) > 0 then
@@ -268,58 +228,6 @@ view model =
                         ]
                   else
                     Html.text ""
-                ]
-
-        viewActivatableAstrolabs =
-            Html.div []
-                [ Html.p [] [ Html.text "Plug your Astrolab into your router and turn it on. Wait 30 seconds, and you should see it below." ]
-                , Bootstrap.Table.table
-                    { options = [ Bootstrap.Table.hover, Bootstrap.Table.small ]
-                    , thead =
-                        Bootstrap.Table.simpleThead
-                            [ Bootstrap.Table.th [] [ Html.text "Public IP" ]
-                            , Bootstrap.Table.th [] [ Html.text "Last Detected" ]
-                            , Bootstrap.Table.th [] [ Html.text "Country" ]
-                            , Bootstrap.Table.th [] [ Html.text "Region" ]
-                            , Bootstrap.Table.th [] [ Html.text "City" ]
-                            , Bootstrap.Table.th [] [ Html.text "Zip Code" ]
-                            , Bootstrap.Table.th [] [ Html.text "Latitude" ]
-                            , Bootstrap.Table.th [] [ Html.text "Longitude" ]
-                            ]
-                    , tbody =
-                        Bootstrap.Table.tbody []
-                            [ Bootstrap.Table.tr []
-                                [ Bootstrap.Table.td [] [ Html.text "147.148.156.100" ]
-                                , Bootstrap.Table.td [] [ Html.text "2017-06-11T04:26:12.706Z" ]
-                                , Bootstrap.Table.td [] [ Html.text "United Kingdom" ]
-                                , Bootstrap.Table.td [] [ Html.text "England" ]
-                                , Bootstrap.Table.td [] [ Html.text "Chichester" ]
-                                , Bootstrap.Table.td [] [ Html.text "PO20" ]
-                                , Bootstrap.Table.td [] [ Html.text "50.8383" ]
-                                , Bootstrap.Table.td [] [ Html.text "-0.6708" ]
-                                ]
-                            , Bootstrap.Table.tr []
-                                [ Bootstrap.Table.td [] [ Html.text "86.101.75.9" ]
-                                , Bootstrap.Table.td [] [ Html.text "2017-06-10T04:26:12.706Z" ]
-                                , Bootstrap.Table.td [] [ Html.text "United States" ]
-                                , Bootstrap.Table.td [] [ Html.text "Massachusetts" ]
-                                , Bootstrap.Table.td [] [ Html.text "Boston" ]
-                                , Bootstrap.Table.td [] [ Html.text "02110" ]
-                                , Bootstrap.Table.td [] [ Html.text "47.8383" ]
-                                , Bootstrap.Table.td [] [ Html.text "-9.6708" ]
-                                ]
-                            , Bootstrap.Table.tr []
-                                [ Bootstrap.Table.td [] [ Html.text "23.57.94.4" ]
-                                , Bootstrap.Table.td [] [ Html.text "2017-06-10T04:26:12.706Z" ]
-                                , Bootstrap.Table.td [] [ Html.text "United States" ]
-                                , Bootstrap.Table.td [] [ Html.text "Massachusetts" ]
-                                , Bootstrap.Table.td [] [ Html.text "Arlington" ]
-                                , Bootstrap.Table.td [] [ Html.text "02133" ]
-                                , Bootstrap.Table.td [] [ Html.text "47.8391" ]
-                                , Bootstrap.Table.td [] [ Html.text "-9.6798" ]
-                                ]
-                            ]
-                    }
                 ]
 
         viewUploadLogsModal =
@@ -354,7 +262,7 @@ view model =
         viewServiceEmbed =
             case model.route of
                 ActivateAstrolabRoute ->
-                    viewActivatableAstrolabs
+                    AstrolabActivator.view
 
                 HomeRoute ->
                     ViewAbout.view
@@ -380,7 +288,7 @@ view model =
     in
         Html.div [ Html.Attributes.class "container" ]
             [ Bootstrap.CDN.stylesheet
-            , viewNavbar
+            , ViewNavigation.view ( NavbarMsg, model, ServiceSelect, UploadLogsModalMsg )
             , viewUploadLogsModal
             , viewServiceEmbed
             ]
