@@ -9,7 +9,11 @@ import Bootstrap.Navbar
 import Html
 import Html.Attributes
 import Http
+import JsonApi
+import JsonApi.Http
+import JsonApi.Resources
 import Json.Decode
+import Json.Decode.Pipeline
 import Json.Encode
 import Maybe
 import Navigation
@@ -29,10 +33,6 @@ type Route
     | UploadLogsRoute
     | ActivateAstrolabRoute
     | NotFoundRoute
-
-
-
--- These following parsers are provided by the url-parser library
 
 
 matchers : UrlParser.Parser (Route -> a) a
@@ -72,7 +72,10 @@ type alias Model =
     , navbarState : Bootstrap.Navbar.State
     , uploadLogsModalState : Bootstrap.Modal.State
     , uploadLogsInFlight : Bool
+    , loadingAstrolabs : Bool
+    , activatingAstrolab : Bool
     , route : Route
+    , astrolabs : Maybe (List AstrolabActivator.Astrolab)
     }
 
 
@@ -96,7 +99,10 @@ initialState location =
           , navbarState = navbarState
           , uploadLogsModalState = Bootstrap.Modal.hiddenState
           , uploadLogsInFlight = False
+          , loadingAstrolabs = False
+          , activatingAstrolab = False
           , route = parseLocation location
+          , astrolabs = Nothing
           }
         , navbarCmd
         )
@@ -115,6 +121,11 @@ type Msg
     | NavbarMsg Bootstrap.Navbar.State
     | UploadLogsModalMsg Bootstrap.Modal.State
     | UploadLogs
+      -- Astrolab-specific messages:
+    | LoadAstrolabs
+    | LoadAstrolabsComplete (Result Http.Error (List JsonApi.Resource))
+    | ActivateAstrolab
+    | ActivateAstrolabComplete (Result Http.Error JsonApi.Resource)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -171,9 +182,83 @@ update message model =
         LogsUploaded (Err error) ->
             ( { model | uploaded_log_url = (toString error), uploadLogsInFlight = False }, Cmd.none )
 
+        LoadAstrolabs ->
+            ( { model | loadingAstrolabs = True }, loadAstrolabs )
+
+        LoadAstrolabsComplete (Ok resources) ->
+            --            Debug.log (parseAstrolabs resources)
+            ( { model
+                | loadingAstrolabs = False
+                , astrolabs = parseAstrolabs resources
+              }
+            , Cmd.none
+            )
+
+        LoadAstrolabsComplete (Err error) ->
+            Debug.log ("Error: " ++ toString error)
+                ( { model | loadingAstrolabs = False, astrolabs = Nothing }, Cmd.none )
+
+        ActivateAstrolab ->
+            model |> update NoOp
+
+        ActivateAstrolabComplete (Ok output) ->
+            model |> update NoOp
+
+        _ ->
+            model |> update NoOp
+
 
 
 -- DECODERS
+
+
+astrolabDecoder : Json.Decode.Decoder AstrolabActivator.Astrolab
+astrolabDecoder =
+    Json.Decode.Pipeline.decode AstrolabActivator.Astrolab
+        |> Json.Decode.Pipeline.required "last-public-ip-address" Json.Decode.string
+        |> Json.Decode.Pipeline.required "last-seen-at" Json.Decode.string
+        |> Json.Decode.Pipeline.required "last-country-name" Json.Decode.string
+        |> Json.Decode.Pipeline.required "last-region-name" Json.Decode.string
+        |> Json.Decode.Pipeline.required "last-city" Json.Decode.string
+        |> Json.Decode.Pipeline.required "last-zip-code" Json.Decode.string
+        |> Json.Decode.Pipeline.required "last-time-zone" Json.Decode.string
+        |> Json.Decode.Pipeline.required "last-latitude" Json.Decode.float
+        |> Json.Decode.Pipeline.required "last-longitude" Json.Decode.float
+
+
+loadAstrolabs : Cmd Msg
+loadAstrolabs =
+    JsonApi.Http.getPrimaryResourceCollection "http://localhost:3000/v1/astrolabs"
+        |> Http.send LoadAstrolabsComplete
+
+
+parseAstrolabs astrolabs_list =
+    List.map
+        (\r ->
+            (JsonApi.Resources.attributes astrolabDecoder r)
+        )
+        astrolabs_list
+        |> listOfResultsToMaybeList
+
+
+listOfResultsToMaybeList list =
+    removeErrorFromList list
+        |> Just
+
+
+removeErrorFromList : List (Result a b) -> List b
+removeErrorFromList list =
+    case (List.reverse list) of
+        (Ok a) :: xs ->
+            a :: removeErrorFromList xs
+
+        (Err b) :: xs ->
+            Debug.log (toString b)
+                removeErrorFromList
+                xs
+
+        [] ->
+            []
 
 
 logsUploadedDecoder : Json.Decode.Decoder String
@@ -215,7 +300,7 @@ view model =
         viewServiceEmbed =
             case model.route of
                 ActivateAstrolabRoute ->
-                    AstrolabActivator.view
+                    AstrolabActivator.view model
 
                 HomeRoute ->
                     ViewAbout.view
@@ -241,7 +326,7 @@ view model =
     in
         Html.div [ Html.Attributes.class "container" ]
             [ Bootstrap.CDN.stylesheet
-            , ViewNavigation.view ( NavbarMsg, model, ServiceSelect, UploadLogsModalMsg )
+            , ViewNavigation.view ( NavbarMsg, model, ServiceSelect, UploadLogsModalMsg, LoadAstrolabs )
             , ViewUploadLogs.viewModal ( UploadLogsModalMsg, model, UploadLogs )
             , viewServiceEmbed
             ]

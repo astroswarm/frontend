@@ -1,13 +1,34 @@
-module AstrolabActivator exposing (view)
+module AstrolabActivator exposing (Astrolab, view)
 
 import Bootstrap.Table
 import Html
-import Html.Attributes
 
 
-view =
+type alias Astrolab =
+    { last_public_ip_address : String
+    , last_seen_at : String
+    , last_country_name : String
+    , last_region_name : String
+    , last_city : String
+    , last_zip_code : String
+    , last_time_zone : String
+    , last_latitude : Float
+    , last_longitude : Float
+    }
+
+
+view : { model | astrolabs : Maybe (List Astrolab), loadingAstrolabs : Bool } -> Html.Html msg
+view model =
     Html.div []
-        [ Html.p [] [ Html.text "Plug your Astrolab into your router and turn it on. Wait 30 seconds, and you should see it below." ]
+        [ Html.p []
+            [ Html.text
+                (if model.loadingAstrolabs then
+                    "Loading unregisted Astrolabs..."
+                 else
+                    "Loaded."
+                )
+            ]
+        , Html.p [] [ Html.text "Plug your Astrolab into your router and turn it on. Wait 30 seconds, and you should see it below." ]
         , Bootstrap.Table.table
             { options = [ Bootstrap.Table.hover, Bootstrap.Table.small ]
             , thead =
@@ -22,37 +43,26 @@ view =
                     , Bootstrap.Table.th [] [ Html.text "Longitude" ]
                     ]
             , tbody =
-                Bootstrap.Table.tbody []
-                    [ Bootstrap.Table.tr []
-                        [ Bootstrap.Table.td [] [ Html.text "147.148.156.100" ]
-                        , Bootstrap.Table.td [] [ Html.text "2017-06-11T04:26:12.706Z" ]
-                        , Bootstrap.Table.td [] [ Html.text "United Kingdom" ]
-                        , Bootstrap.Table.td [] [ Html.text "England" ]
-                        , Bootstrap.Table.td [] [ Html.text "Chichester" ]
-                        , Bootstrap.Table.td [] [ Html.text "PO20" ]
-                        , Bootstrap.Table.td [] [ Html.text "50.8383" ]
-                        , Bootstrap.Table.td [] [ Html.text "-0.6708" ]
-                        ]
-                    , Bootstrap.Table.tr []
-                        [ Bootstrap.Table.td [] [ Html.text "86.101.75.9" ]
-                        , Bootstrap.Table.td [] [ Html.text "2017-06-10T04:26:12.706Z" ]
-                        , Bootstrap.Table.td [] [ Html.text "United States" ]
-                        , Bootstrap.Table.td [] [ Html.text "Massachusetts" ]
-                        , Bootstrap.Table.td [] [ Html.text "Boston" ]
-                        , Bootstrap.Table.td [] [ Html.text "02110" ]
-                        , Bootstrap.Table.td [] [ Html.text "47.8383" ]
-                        , Bootstrap.Table.td [] [ Html.text "-9.6708" ]
-                        ]
-                    , Bootstrap.Table.tr []
-                        [ Bootstrap.Table.td [] [ Html.text "23.57.94.4" ]
-                        , Bootstrap.Table.td [] [ Html.text "2017-06-10T04:26:12.706Z" ]
-                        , Bootstrap.Table.td [] [ Html.text "United States" ]
-                        , Bootstrap.Table.td [] [ Html.text "Massachusetts" ]
-                        , Bootstrap.Table.td [] [ Html.text "Arlington" ]
-                        , Bootstrap.Table.td [] [ Html.text "02133" ]
-                        , Bootstrap.Table.td [] [ Html.text "47.8391" ]
-                        , Bootstrap.Table.td [] [ Html.text "-9.6798" ]
-                        ]
-                    ]
+                case model.astrolabs of
+                    Nothing ->
+                        Bootstrap.Table.tbody [] [ Bootstrap.Table.tr [] [] ]
+
+                    Just astrolabs ->
+                        Bootstrap.Table.tbody []
+                            (List.map
+                                (\astrolab ->
+                                    Bootstrap.Table.tr []
+                                        [ Bootstrap.Table.td [] [ Html.text astrolab.last_public_ip_address ]
+                                        , Bootstrap.Table.td [] [ Html.text astrolab.last_seen_at ]
+                                        , Bootstrap.Table.td [] [ Html.text astrolab.last_country_name ]
+                                        , Bootstrap.Table.td [] [ Html.text astrolab.last_region_name ]
+                                        , Bootstrap.Table.td [] [ Html.text astrolab.last_city ]
+                                        , Bootstrap.Table.td [] [ Html.text astrolab.last_zip_code ]
+                                        , Bootstrap.Table.td [] [ Html.text (toString astrolab.last_latitude) ]
+                                        , Bootstrap.Table.td [] [ Html.text (toString astrolab.last_longitude) ]
+                                        ]
+                                )
+                                astrolabs
+                            )
             }
         ]

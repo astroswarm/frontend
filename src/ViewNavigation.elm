@@ -7,7 +7,7 @@ import Html.Attributes
 import Html.Events
 
 
-view ( navbar_msg, model, service_select_cmd, upload_logs_modal_msg ) =
+view ( navbar_msg, model, service_select_cmd, upload_logs_modal_msg, load_astrolabs_msg ) =
     Html.div []
         [ Bootstrap.Navbar.config navbar_msg
             |> Bootstrap.Navbar.withAnimation
@@ -17,7 +17,9 @@ view ( navbar_msg, model, service_select_cmd, upload_logs_modal_msg ) =
                     [ Html.Attributes.href "#" ]
                     [ Html.text "About" ]
                 , Bootstrap.Navbar.itemLink
-                    [ Html.Attributes.href "#activate" ]
+                    [ Html.Attributes.href "#activate"
+                    , Html.Events.onClick (load_astrolabs_msg)
+                    ]
                     [ Html.text "Activate Your Astrolab" ]
                 , Bootstrap.Navbar.dropdown
                     { id = "serviceSelect"
