@@ -26,6 +26,7 @@ type Route
     = HomeRoute
     | ServiceRoute String
     | UploadLogsRoute
+    | ActivateAstrolabRoute
     | NotFoundRoute
 
 
@@ -39,6 +40,7 @@ matchers =
         [ UrlParser.map HomeRoute UrlParser.top
         , UrlParser.map ServiceRoute (UrlParser.s "services" </> UrlParser.string)
         , UrlParser.map UploadLogsRoute (UrlParser.s "upload-logs")
+        , UrlParser.map ActivateAstrolabRoute (UrlParser.s "activate")
         ]
 
 
@@ -68,6 +70,7 @@ type alias Model =
     , uploaded_log_url : String
     , navbarState : Bootstrap.Navbar.State
     , uploadLogsModalState : Bootstrap.Modal.State
+    , activateAstrolabModalState : Bootstrap.Modal.State
     , uploadLogsInFlight : Bool
     , route : Route
     }
@@ -92,6 +95,7 @@ initialState location =
           , uploaded_log_url = ""
           , navbarState = navbarState
           , uploadLogsModalState = Bootstrap.Modal.hiddenState
+          , activateAstrolabModalState = Bootstrap.Modal.hiddenState
           , uploadLogsInFlight = False
           , route = parseLocation location
           }
@@ -111,6 +115,7 @@ type Msg
     | LogsUploaded (Result Http.Error String)
     | NavbarMsg Bootstrap.Navbar.State
     | UploadLogsModalMsg Bootstrap.Modal.State
+    | ActivateAstrolabModalMsg Bootstrap.Modal.State
     | UploadLogs
 
 
@@ -146,6 +151,9 @@ update message model =
 
         UploadLogsModalMsg state ->
             ( { model | uploadLogsModalState = state }, Cmd.none )
+
+        ActivateAstrolabModalMsg state ->
+            ( { model | activateAstrolabModalState = state }, Cmd.none )
 
         ServiceSelect new_service ->
             if new_service /= model.selected_service_name then
@@ -239,6 +247,16 @@ view model =
                                     [ Html.text "Upload Logs" ]
                                 ]
                             }
+                        , Bootstrap.Navbar.dropdown
+                            { id = "getStarted"
+                            , toggle = Bootstrap.Navbar.dropdownToggle [] [ Html.text "Get Started" ]
+                            , items =
+                                [ Bootstrap.Navbar.dropdownItem
+                                    [ Html.Events.onClick (ActivateAstrolabModalMsg Bootstrap.Modal.visibleState)
+                                    ]
+                                    [ Html.text "Activate Your Astrolab" ]
+                                ]
+                            }
                         ]
                     |> Bootstrap.Navbar.view model.navbarState
                 ]
@@ -259,6 +277,32 @@ view model =
                   else
                     Html.text ""
                 ]
+
+        viewActivatableAstrolabs =
+            Html.div []
+                [ if True then
+                    Bootstrap.Alert.info
+                        [ Html.div []
+                            [ Html.text "No Astrolabs found yet." ]
+                        ]
+                  else
+                    Html.text "Not yet implemented."
+                ]
+
+        viewActivateAstrolabModal =
+            Bootstrap.Modal.config ActivateAstrolabModalMsg
+                |> Bootstrap.Modal.large
+                |> Bootstrap.Modal.h3 [] [ Html.text "Activate Your Astrolab" ]
+                |> Bootstrap.Modal.body []
+                    [ Html.p [] [ Html.text "Plug your Astrolab into your router and turn it on. Wait 30 seconds, and you should see it below." ]
+                    , viewActivatableAstrolabs
+                    ]
+                |> Bootstrap.Modal.footer []
+                    [ Bootstrap.Button.button
+                        [ Bootstrap.Button.secondary, Bootstrap.Button.onClick (ActivateAstrolabModalMsg Bootstrap.Modal.hiddenState) ]
+                        [ Html.text "Close" ]
+                    ]
+                |> Bootstrap.Modal.view model.activateAstrolabModalState
 
         viewUploadLogsModal =
             Bootstrap.Modal.config UploadLogsModalMsg
@@ -309,6 +353,7 @@ view model =
             [ Bootstrap.CDN.stylesheet
             , viewNavbar
             , viewUploadLogsModal
+            , viewActivateAstrolabModal
             , viewServiceEmbed
             ]
 
