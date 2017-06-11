@@ -15,8 +15,8 @@ import Http
 import Json.Decode
 import Json.Encode
 import Maybe
-import Navigation exposing (Location)
-import UrlParser exposing (..)
+import Navigation
+import UrlParser exposing ((</>))
 
 
 -- Route
@@ -33,18 +33,18 @@ type Route
 -- These following parsers are provided by the url-parser library
 
 
-matchers : Parser (Route -> a) a
+matchers : UrlParser.Parser (Route -> a) a
 matchers =
-    oneOf
-        [ map HomeRoute top
-        , map ServiceRoute (s "services" </> string)
-        , map UploadLogsRoute (s "upload-logs")
+    UrlParser.oneOf
+        [ UrlParser.map HomeRoute UrlParser.top
+        , UrlParser.map ServiceRoute (UrlParser.s "services" </> UrlParser.string)
+        , UrlParser.map UploadLogsRoute (UrlParser.s "upload-logs")
         ]
 
 
-parseLocation : Location -> Route
+parseLocation : Navigation.Location -> Route
 parseLocation location =
-    case (parseHash matchers location) of
+    case (UrlParser.parseHash matchers location) of
         Just route ->
             route
 
@@ -77,7 +77,7 @@ type alias Model =
 -- Model Initialization
 
 
-initialState : Location -> ( Model, Cmd Msg )
+initialState : Navigation.Location -> ( Model, Cmd Msg )
 initialState location =
     let
         ( navbarState, navbarCmd ) =
@@ -105,7 +105,7 @@ initialState location =
 
 type Msg
     = NoOp
-    | OnLocationChange Location
+    | OnLocationChange Navigation.Location
     | UpdateRoute Route
     | ServiceSelect String
     | LogsUploaded (Result Http.Error String)
