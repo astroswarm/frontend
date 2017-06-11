@@ -42,13 +42,8 @@ matchers =
         ]
 
 
-
--- Each time the browser location changes, the Navigation library will trigger a message containing a Navigation.Location record. From our main update we will call parseLocation with this record.
-
-
 parseLocation : Location -> Route
 parseLocation location =
-    -- In this case we UrlParser.parseHash as we will be routing using the hash. You could use UrlParser.parsePath to route with the path instead.
     case (parseHash matchers location) of
         Just route ->
             route
@@ -111,6 +106,7 @@ initialState location =
 type Msg
     = NoOp
     | OnLocationChange Location
+    | UpdateRoute Route
     | ServiceSelect String
     | LogsUploaded (Result Http.Error String)
     | NavbarMsg Bootstrap.Navbar.State
@@ -129,7 +125,21 @@ update message model =
                 newRoute =
                     parseLocation location
             in
-                ( { model | route = newRoute }, Cmd.none )
+                { model | route = newRoute }
+                    |> update (UpdateRoute newRoute)
+
+        UpdateRoute newRoute ->
+            case newRoute of
+                ServiceRoute string ->
+                    { model | route = newRoute }
+                        |> update (ServiceSelect string)
+
+                UploadLogsRoute ->
+                    model
+                        |> update (UploadLogsModalMsg Bootstrap.Modal.visibleState)
+
+                _ ->
+                    ( { model | route = newRoute }, Cmd.none )
 
         NavbarMsg state ->
             ( { model | navbarState = state }, Cmd.none )
@@ -138,7 +148,11 @@ update message model =
             ( { model | uploadLogsModalState = state }, Cmd.none )
 
         ServiceSelect new_service ->
-            ( { model | selected_service_name = new_service }, Cmd.none )
+            if new_service /= model.selected_service_name then
+                { model | selected_service_name = new_service }
+                    |> update (UpdateRoute (ServiceRoute new_service))
+            else
+                ( model, Cmd.none )
 
         UploadLogs ->
             ( { model | uploadLogsInFlight = True }, uploadLogs model )
@@ -162,10 +176,6 @@ update message model =
 logsUploadedDecoder : Json.Decode.Decoder String
 logsUploadedDecoder =
     Json.Decode.field "output" Json.Decode.string
-
-
-
--- COMMANDS
 
 
 uploadLogs : Model -> Cmd Msg
