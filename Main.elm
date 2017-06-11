@@ -218,7 +218,13 @@ view model =
                     |> Bootstrap.Navbar.withAnimation
                     |> Bootstrap.Navbar.brand [ Html.Attributes.href "#" ] [ Html.text "AstroSwarm" ]
                     |> Bootstrap.Navbar.items
-                        [ Bootstrap.Navbar.dropdown
+                        [ Bootstrap.Navbar.itemLink
+                            [ Html.Attributes.href "#" ]
+                            [ Html.text "About" ]
+                        , Bootstrap.Navbar.itemLink
+                            [ Html.Attributes.href "#activate" ]
+                            [ Html.text "Activate Your Astrolab" ]
+                        , Bootstrap.Navbar.dropdown
                             { id = "serviceSelect"
                             , toggle = Bootstrap.Navbar.dropdownToggle [] [ Html.text model.selected_service_name ]
                             , items =
@@ -240,16 +246,6 @@ view model =
                                     [ Html.Events.onClick (UploadLogsModalMsg Bootstrap.Modal.visibleState)
                                     ]
                                     [ Html.text "Upload Logs" ]
-                                ]
-                            }
-                        , Bootstrap.Navbar.dropdown
-                            { id = "getStarted"
-                            , toggle = Bootstrap.Navbar.dropdownToggle [] [ Html.text "Get Started" ]
-                            , items =
-                                [ Bootstrap.Navbar.dropdownItem
-                                    [ Html.Events.onClick (UpdateRoute ActivateAstrolabRoute)
-                                    ]
-                                    [ Html.text "Activate Your Astrolab" ]
                                 ]
                             }
                         ]
@@ -354,10 +350,26 @@ view model =
                     ]
                 |> Bootstrap.Modal.view model.uploadLogsModalState
 
+        viewHomepage =
+            Html.div []
+                [ Html.h1 [] [ Html.text "Welcome to AstroSwarm!" ]
+                , Html.p [] [ Html.text "We're making it easy for anyone to study space and share their findings." ]
+                , Html.p []
+                    [ Html.text "First, we're making it easier for people who already have telescopes to use them and share their photos and data. Have a telescope? You should join us! "
+                    , Html.a [ Html.Attributes.href "mailto:robby@freerobby.com" ] [ Html.text "Email Robby" ]
+                    , Html.text " for details."
+                    ]
+                , Html.p [] [ Html.text "After we build a community, we'll have a global network of telescopes. We'll use this network to make it easy to collaborate with other astronomers, and to share your findings with the larger world. People who don't have or can't afford telescopes will be able to use and control them for free over the internet." ]
+                , Html.p [] [ Html.text "Over time, our platform will model how humans observe space, and then allow the telescopes to look for things entirely on their own. Because they're networked, they can coordinate with each other for around-the-clock coverage of interesting celestial phenomena, and we'll learn more about space than we ever have before." ]
+                ]
+
         viewServiceEmbed =
             case model.route of
                 ActivateAstrolabRoute ->
                     viewActivatableAstrolabs
+
+                HomeRoute ->
+                    viewHomepage
 
                 ServiceRoute service_name ->
                     Html.iframe
