@@ -5,9 +5,10 @@ module Main exposing (..)
 
 import Bootstrap.Alert
 import Bootstrap.Button
+import Bootstrap.CDN
 import Bootstrap.Modal
 import Bootstrap.Navbar
-import Bootstrap.CDN
+import Bootstrap.Table
 import Html
 import Html.Attributes
 import Html.Events
@@ -70,7 +71,6 @@ type alias Model =
     , uploaded_log_url : String
     , navbarState : Bootstrap.Navbar.State
     , uploadLogsModalState : Bootstrap.Modal.State
-    , activateAstrolabModalState : Bootstrap.Modal.State
     , uploadLogsInFlight : Bool
     , route : Route
     }
@@ -95,7 +95,6 @@ initialState location =
           , uploaded_log_url = ""
           , navbarState = navbarState
           , uploadLogsModalState = Bootstrap.Modal.hiddenState
-          , activateAstrolabModalState = Bootstrap.Modal.hiddenState
           , uploadLogsInFlight = False
           , route = parseLocation location
           }
@@ -115,7 +114,6 @@ type Msg
     | LogsUploaded (Result Http.Error String)
     | NavbarMsg Bootstrap.Navbar.State
     | UploadLogsModalMsg Bootstrap.Modal.State
-    | ActivateAstrolabModalMsg Bootstrap.Modal.State
     | UploadLogs
 
 
@@ -151,9 +149,6 @@ update message model =
 
         UploadLogsModalMsg state ->
             ( { model | uploadLogsModalState = state }, Cmd.none )
-
-        ActivateAstrolabModalMsg state ->
-            ( { model | activateAstrolabModalState = state }, Cmd.none )
 
         ServiceSelect new_service ->
             if new_service /= model.selected_service_name then
@@ -252,7 +247,7 @@ view model =
                             , toggle = Bootstrap.Navbar.dropdownToggle [] [ Html.text "Get Started" ]
                             , items =
                                 [ Bootstrap.Navbar.dropdownItem
-                                    [ Html.Events.onClick (ActivateAstrolabModalMsg Bootstrap.Modal.visibleState)
+                                    [ Html.Events.onClick (UpdateRoute ActivateAstrolabRoute)
                                     ]
                                     [ Html.text "Activate Your Astrolab" ]
                                 ]
@@ -280,29 +275,55 @@ view model =
 
         viewActivatableAstrolabs =
             Html.div []
-                [ if True then
-                    Bootstrap.Alert.info
-                        [ Html.div []
-                            [ Html.text "No Astrolabs found yet." ]
-                        ]
-                  else
-                    Html.text "Not yet implemented."
+                [ Html.p [] [ Html.text "Plug your Astrolab into your router and turn it on. Wait 30 seconds, and you should see it below." ]
+                , Bootstrap.Table.table
+                    { options = [ Bootstrap.Table.hover, Bootstrap.Table.small ]
+                    , thead =
+                        Bootstrap.Table.simpleThead
+                            [ Bootstrap.Table.th [] [ Html.text "Public IP" ]
+                            , Bootstrap.Table.th [] [ Html.text "Last Detected" ]
+                            , Bootstrap.Table.th [] [ Html.text "Country" ]
+                            , Bootstrap.Table.th [] [ Html.text "Region" ]
+                            , Bootstrap.Table.th [] [ Html.text "City" ]
+                            , Bootstrap.Table.th [] [ Html.text "Zip Code" ]
+                            , Bootstrap.Table.th [] [ Html.text "Latitude" ]
+                            , Bootstrap.Table.th [] [ Html.text "Longitude" ]
+                            ]
+                    , tbody =
+                        Bootstrap.Table.tbody []
+                            [ Bootstrap.Table.tr []
+                                [ Bootstrap.Table.td [] [ Html.text "147.148.156.100" ]
+                                , Bootstrap.Table.td [] [ Html.text "2017-06-11T04:26:12.706Z" ]
+                                , Bootstrap.Table.td [] [ Html.text "United Kingdom" ]
+                                , Bootstrap.Table.td [] [ Html.text "England" ]
+                                , Bootstrap.Table.td [] [ Html.text "Chichester" ]
+                                , Bootstrap.Table.td [] [ Html.text "PO20" ]
+                                , Bootstrap.Table.td [] [ Html.text "50.8383" ]
+                                , Bootstrap.Table.td [] [ Html.text "-0.6708" ]
+                                ]
+                            , Bootstrap.Table.tr []
+                                [ Bootstrap.Table.td [] [ Html.text "86.101.75.9" ]
+                                , Bootstrap.Table.td [] [ Html.text "2017-06-10T04:26:12.706Z" ]
+                                , Bootstrap.Table.td [] [ Html.text "United States" ]
+                                , Bootstrap.Table.td [] [ Html.text "Massachusetts" ]
+                                , Bootstrap.Table.td [] [ Html.text "Boston" ]
+                                , Bootstrap.Table.td [] [ Html.text "02110" ]
+                                , Bootstrap.Table.td [] [ Html.text "47.8383" ]
+                                , Bootstrap.Table.td [] [ Html.text "-9.6708" ]
+                                ]
+                            , Bootstrap.Table.tr []
+                                [ Bootstrap.Table.td [] [ Html.text "23.57.94.4" ]
+                                , Bootstrap.Table.td [] [ Html.text "2017-06-10T04:26:12.706Z" ]
+                                , Bootstrap.Table.td [] [ Html.text "United States" ]
+                                , Bootstrap.Table.td [] [ Html.text "Massachusetts" ]
+                                , Bootstrap.Table.td [] [ Html.text "Arlington" ]
+                                , Bootstrap.Table.td [] [ Html.text "02133" ]
+                                , Bootstrap.Table.td [] [ Html.text "47.8391" ]
+                                , Bootstrap.Table.td [] [ Html.text "-9.6798" ]
+                                ]
+                            ]
+                    }
                 ]
-
-        viewActivateAstrolabModal =
-            Bootstrap.Modal.config ActivateAstrolabModalMsg
-                |> Bootstrap.Modal.large
-                |> Bootstrap.Modal.h3 [] [ Html.text "Activate Your Astrolab" ]
-                |> Bootstrap.Modal.body []
-                    [ Html.p [] [ Html.text "Plug your Astrolab into your router and turn it on. Wait 30 seconds, and you should see it below." ]
-                    , viewActivatableAstrolabs
-                    ]
-                |> Bootstrap.Modal.footer []
-                    [ Bootstrap.Button.button
-                        [ Bootstrap.Button.secondary, Bootstrap.Button.onClick (ActivateAstrolabModalMsg Bootstrap.Modal.hiddenState) ]
-                        [ Html.text "Close" ]
-                    ]
-                |> Bootstrap.Modal.view model.activateAstrolabModalState
 
         viewUploadLogsModal =
             Bootstrap.Modal.config UploadLogsModalMsg
@@ -334,26 +355,33 @@ view model =
                 |> Bootstrap.Modal.view model.uploadLogsModalState
 
         viewServiceEmbed =
-            Html.iframe
-                [ Html.Attributes.src
-                    ("http://localhost:6080/vnc_auto.html?host=localhost&port="
-                        ++ (List.filter (\n -> n.name == model.selected_service_name) model.services
-                                |> List.map .websockify_port
-                                |> List.head
-                                |> Maybe.withDefault 0
-                                |> toString
-                           )
-                    )
-                , Html.Attributes.height 600
-                , Html.Attributes.width 1000
-                ]
-                []
+            case model.route of
+                ActivateAstrolabRoute ->
+                    viewActivatableAstrolabs
+
+                ServiceRoute service_name ->
+                    Html.iframe
+                        [ Html.Attributes.src
+                            ("http://localhost:6080/vnc_auto.html?host=localhost&port="
+                                ++ (List.filter (\n -> n.name == model.selected_service_name) model.services
+                                        |> List.map .websockify_port
+                                        |> List.head
+                                        |> Maybe.withDefault 0
+                                        |> toString
+                                   )
+                            )
+                        , Html.Attributes.height 600
+                        , Html.Attributes.width 1000
+                        ]
+                        []
+
+                _ ->
+                    Html.text "Nothing yet"
     in
         Html.div [ Html.Attributes.class "container" ]
             [ Bootstrap.CDN.stylesheet
             , viewNavbar
             , viewUploadLogsModal
-            , viewActivateAstrolabModal
             , viewServiceEmbed
             ]
 
