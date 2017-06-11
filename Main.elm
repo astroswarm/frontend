@@ -15,6 +15,47 @@ import Http
 import Json.Decode
 import Json.Encode
 import Maybe
+import Navigation exposing (Location)
+import UrlParser exposing (..)
+
+
+-- Route
+
+
+type Route
+    = HomeRoute
+    | ServiceRoute String
+    | UploadLogsRoute
+    | NotFoundRoute
+
+
+
+-- These following parsers are provided by the url-parser library
+
+
+matchers : Parser (Route -> a) a
+matchers =
+    oneOf
+        [ map HomeRoute top
+        , map ServiceRoute (s "services" </> string)
+        , map UploadLogsRoute (s "upload-logs")
+        ]
+
+
+
+-- Each time the browser location changes, the Navigation library will trigger a message containing a Navigation.Location record. From our main update we will call parseLocation with this record.
+
+
+parseLocation : Location -> Route
+parseLocation location =
+    -- In this case we UrlParser.parseHash as we will be routing using the hash. You could use UrlParser.parsePath to route with the path instead.
+    case (parseHash matchers location) of
+        Just route ->
+            route
+
+        Nothing ->
+            NotFoundRoute
+
 
 
 -- Model
@@ -33,6 +74,7 @@ type alias Model =
     , navbarState : Bootstrap.Navbar.State
     , uploadLogsModalState : Bootstrap.Modal.State
     , uploadLogsInFlight : Bool
+    , route : Route
     }
 
 
@@ -40,8 +82,8 @@ type alias Model =
 -- Model Initialization
 
 
-initialState : ( Model, Cmd Msg )
-initialState =
+initialState : Location -> ( Model, Cmd Msg )
+initialState location =
     let
         ( navbarState, navbarCmd ) =
             Bootstrap.Navbar.initialState NavbarMsg
@@ -56,6 +98,7 @@ initialState =
           , navbarState = navbarState
           , uploadLogsModalState = Bootstrap.Modal.hiddenState
           , uploadLogsInFlight = False
+          , route = parseLocation location
           }
         , navbarCmd
         )
@@ -67,6 +110,7 @@ initialState =
 
 type Msg
     = NoOp
+    | OnLocationChange Location
     | ServiceSelect String
     | LogsUploaded (Result Http.Error String)
     | NavbarMsg Bootstrap.Navbar.State
@@ -79,6 +123,13 @@ update message model =
     case message of
         NoOp ->
             ( model, Cmd.none )
+
+        OnLocationChange location ->
+            let
+                newRoute =
+                    parseLocation location
+            in
+                ( { model | route = newRoute }, Cmd.none )
 
         NavbarMsg state ->
             ( { model | navbarState = state }, Cmd.none )
@@ -263,7 +314,7 @@ subscriptions model =
 
 main : Program Never Model Msg
 main =
-    Html.program
+    Navigation.program OnLocationChange
         { init = initialState
         , view = view
         , update = update
