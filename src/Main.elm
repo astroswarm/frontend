@@ -232,6 +232,7 @@ loadAstrolabs =
         |> Http.send LoadAstrolabsComplete
 
 
+parseAstrolabs : List JsonApi.Resource -> Maybe (List AstrolabActivator.Astrolab)
 parseAstrolabs astrolabs_list =
     List.map
         (\r ->
@@ -241,6 +242,7 @@ parseAstrolabs astrolabs_list =
         |> listOfResultsToMaybeList
 
 
+listOfResultsToMaybeList : List (Result a b) -> Maybe (List b)
 listOfResultsToMaybeList list =
     removeErrorFromList list
         |> Just
