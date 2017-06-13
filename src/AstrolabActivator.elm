@@ -12,6 +12,7 @@ import JsonApi.Resources
 
 type alias Astrolab =
     { last_public_ip_address : String
+    , last_private_ip_address : String
     , last_seen_at : String
     , last_country_name : String
     , last_region_name : String
@@ -32,6 +33,7 @@ astrolabDecoder : Json.Decode.Decoder Astrolab
 astrolabDecoder =
     Json.Decode.Pipeline.decode Astrolab
         |> Json.Decode.Pipeline.required "last-public-ip-address" Json.Decode.string
+        |> Json.Decode.Pipeline.required "last-private-ip-address" Json.Decode.string
         |> Json.Decode.Pipeline.required "last-seen-at" Json.Decode.string
         |> Json.Decode.Pipeline.required "last-country-name" Json.Decode.string
         |> Json.Decode.Pipeline.required "last-region-name" Json.Decode.string
@@ -95,6 +97,7 @@ view model =
             , thead =
                 Bootstrap.Table.simpleThead
                     [ Bootstrap.Table.th [] [ Html.text "Public IP" ]
+                    , Bootstrap.Table.th [] [ Html.text "Private IP" ]
                     , Bootstrap.Table.th [] [ Html.text "Last Detected" ]
                     , Bootstrap.Table.th [] [ Html.text "Country" ]
                     , Bootstrap.Table.th [] [ Html.text "Region" ]
@@ -114,6 +117,7 @@ view model =
                                 (\astrolab ->
                                     Bootstrap.Table.tr []
                                         [ Bootstrap.Table.td [] [ Html.text astrolab.last_public_ip_address ]
+                                        , Bootstrap.Table.td [] [ Html.text astrolab.last_private_ip_address ]
                                         , Bootstrap.Table.td [] [ Html.text astrolab.last_seen_at ]
                                         , Bootstrap.Table.td [] [ Html.text astrolab.last_country_name ]
                                         , Bootstrap.Table.td [] [ Html.text astrolab.last_region_name ]
