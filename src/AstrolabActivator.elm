@@ -52,6 +52,11 @@ parseAstrolabs astrolabs_list =
         |> listOfResultsToMaybeList
 
 
+
+-- Consider using Maybe-Extra in replace of the following two functions.
+-- https://github.com/elm-community/maybe-extra/blob/4.0.0/src/Maybe/Extra.elm
+
+
 listOfResultsToMaybeList : List (Result a b) -> Maybe (List b)
 listOfResultsToMaybeList list =
     removeErrorFromList list
