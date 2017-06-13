@@ -1,7 +1,13 @@
-module AstrolabActivator exposing (Astrolab, view)
+module AstrolabActivator exposing (Astrolab, loadAstrolabs, parseAstrolabs, view)
 
 import Bootstrap.Table
 import Html
+import Http
+import Json.Decode
+import Json.Decode.Pipeline
+import JsonApi
+import JsonApi.Http
+import JsonApi.Resources
 
 
 type alias Astrolab =
@@ -15,6 +21,56 @@ type alias Astrolab =
     , last_latitude : Float
     , last_longitude : Float
     }
+
+
+loadAstrolabs load_astrolabs_complete_msg =
+    JsonApi.Http.getPrimaryResourceCollection "http://localhost:3000/v1/astrolabs"
+        |> Http.send load_astrolabs_complete_msg
+
+
+astrolabDecoder : Json.Decode.Decoder Astrolab
+astrolabDecoder =
+    Json.Decode.Pipeline.decode Astrolab
+        |> Json.Decode.Pipeline.required "last-public-ip-address" Json.Decode.string
+        |> Json.Decode.Pipeline.required "last-seen-at" Json.Decode.string
+        |> Json.Decode.Pipeline.required "last-country-name" Json.Decode.string
+        |> Json.Decode.Pipeline.required "last-region-name" Json.Decode.string
+        |> Json.Decode.Pipeline.required "last-city" Json.Decode.string
+        |> Json.Decode.Pipeline.required "last-zip-code" Json.Decode.string
+        |> Json.Decode.Pipeline.required "last-time-zone" Json.Decode.string
+        |> Json.Decode.Pipeline.required "last-latitude" Json.Decode.float
+        |> Json.Decode.Pipeline.required "last-longitude" Json.Decode.float
+
+
+parseAstrolabs : List JsonApi.Resource -> Maybe (List Astrolab)
+parseAstrolabs astrolabs_list =
+    List.map
+        (\r ->
+            (JsonApi.Resources.attributes astrolabDecoder r)
+        )
+        astrolabs_list
+        |> listOfResultsToMaybeList
+
+
+listOfResultsToMaybeList : List (Result a b) -> Maybe (List b)
+listOfResultsToMaybeList list =
+    removeErrorFromList list
+        |> Just
+
+
+removeErrorFromList : List (Result a b) -> List b
+removeErrorFromList list =
+    case (List.reverse list) of
+        (Ok a) :: xs ->
+            a :: removeErrorFromList xs
+
+        (Err b) :: xs ->
+            Debug.log (toString b)
+                removeErrorFromList
+                xs
+
+        [] ->
+            []
 
 
 view : { model | astrolabs : Maybe (List Astrolab), loadingAstrolabs : Bool } -> Html.Html msg

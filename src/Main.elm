@@ -10,10 +10,7 @@ import Html
 import Html.Attributes
 import Http
 import JsonApi
-import JsonApi.Http
-import JsonApi.Resources
 import Json.Decode
-import Json.Decode.Pipeline
 import Json.Encode
 import Maybe
 import Navigation
@@ -183,13 +180,12 @@ update message model =
             ( { model | uploaded_log_url = (toString error), uploadLogsInFlight = False }, Cmd.none )
 
         LoadAstrolabs ->
-            ( { model | loadingAstrolabs = True }, loadAstrolabs )
+            ( { model | loadingAstrolabs = True }, (AstrolabActivator.loadAstrolabs LoadAstrolabsComplete) )
 
         LoadAstrolabsComplete (Ok resources) ->
-            --            Debug.log (parseAstrolabs resources)
             ( { model
                 | loadingAstrolabs = False
-                , astrolabs = parseAstrolabs resources
+                , astrolabs = AstrolabActivator.parseAstrolabs resources
               }
             , Cmd.none
             )
@@ -210,57 +206,6 @@ update message model =
 
 
 -- DECODERS
-
-
-astrolabDecoder : Json.Decode.Decoder AstrolabActivator.Astrolab
-astrolabDecoder =
-    Json.Decode.Pipeline.decode AstrolabActivator.Astrolab
-        |> Json.Decode.Pipeline.required "last-public-ip-address" Json.Decode.string
-        |> Json.Decode.Pipeline.required "last-seen-at" Json.Decode.string
-        |> Json.Decode.Pipeline.required "last-country-name" Json.Decode.string
-        |> Json.Decode.Pipeline.required "last-region-name" Json.Decode.string
-        |> Json.Decode.Pipeline.required "last-city" Json.Decode.string
-        |> Json.Decode.Pipeline.required "last-zip-code" Json.Decode.string
-        |> Json.Decode.Pipeline.required "last-time-zone" Json.Decode.string
-        |> Json.Decode.Pipeline.required "last-latitude" Json.Decode.float
-        |> Json.Decode.Pipeline.required "last-longitude" Json.Decode.float
-
-
-loadAstrolabs : Cmd Msg
-loadAstrolabs =
-    JsonApi.Http.getPrimaryResourceCollection "http://localhost:3000/v1/astrolabs"
-        |> Http.send LoadAstrolabsComplete
-
-
-parseAstrolabs : List JsonApi.Resource -> Maybe (List AstrolabActivator.Astrolab)
-parseAstrolabs astrolabs_list =
-    List.map
-        (\r ->
-            (JsonApi.Resources.attributes astrolabDecoder r)
-        )
-        astrolabs_list
-        |> listOfResultsToMaybeList
-
-
-listOfResultsToMaybeList : List (Result a b) -> Maybe (List b)
-listOfResultsToMaybeList list =
-    removeErrorFromList list
-        |> Just
-
-
-removeErrorFromList : List (Result a b) -> List b
-removeErrorFromList list =
-    case (List.reverse list) of
-        (Ok a) :: xs ->
-            a :: removeErrorFromList xs
-
-        (Err b) :: xs ->
-            Debug.log (toString b)
-                removeErrorFromList
-                xs
-
-        [] ->
-            []
 
 
 logsUploadedDecoder : Json.Decode.Decoder String
