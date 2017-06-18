@@ -1,6 +1,5 @@
 {
   "env": {
-    "ELM_COMPILE": "elm-make src/Main.elm --output index.html --warn --yes",
-    "ELM_VERSION": "0.18"
+    "ELM_COMPILE": "elm-make src/Main.elm --output index.html --warn --yes"
   }
 }
