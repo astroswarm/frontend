@@ -231,7 +231,7 @@ uploadLogs model =
                 |> Http.jsonBody
 
         url =
-            "http://localhost:8001/api/execute_command"
+            "http://localhost:5000/api/execute_command"
     in
         Http.post url body logsUploadedDecoder
             |> Http.send LogsUploaded
