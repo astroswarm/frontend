@@ -4,6 +4,7 @@ import Html
 import Html.Attributes
 
 
+view : Html.Html msg
 view =
     Html.div []
         [ Html.h1 [] [ Html.text "Welcome to AstroSwarm!" ]

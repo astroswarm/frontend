@@ -7,6 +7,16 @@ import Html
 import Html.Attributes
 
 
+viewModal :
+    ( Bootstrap.Modal.State -> msg
+    , { a
+        | uploadLogsInFlight : Bool
+        , uploadLogsModalState : Bootstrap.Modal.State
+        , uploaded_log_url : String
+      }
+    , msg
+    )
+    -> Html.Html msg
 viewModal ( upload_logs_modal_msg, model, upload_logs_msg ) =
     Bootstrap.Modal.config upload_logs_modal_msg
         |> Bootstrap.Modal.large
@@ -37,6 +47,7 @@ viewModal ( upload_logs_modal_msg, model, upload_logs_msg ) =
         |> Bootstrap.Modal.view model.uploadLogsModalState
 
 
+viewUploadLogsStatus : { a | uploaded_log_url : String } -> Html.Html msg
 viewUploadLogsStatus model =
     Html.div []
         [ if String.length (model.uploaded_log_url) > 0 then

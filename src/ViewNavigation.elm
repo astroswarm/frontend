@@ -7,6 +7,18 @@ import Html.Attributes
 import Html.Events
 
 
+view :
+    ( Bootstrap.Navbar.State -> msg
+    , { b
+        | navbarState : Bootstrap.Navbar.State
+        , selected_service_name : String
+        , services : List { a | name : String }
+      }
+    , String -> msg
+    , Bootstrap.Modal.State -> msg
+    , msg
+    )
+    -> Html.Html msg
 view ( navbar_msg, model, service_select_cmd, upload_logs_modal_msg, load_astrolabs_msg ) =
     Html.div []
         [ Bootstrap.Navbar.config navbar_msg
