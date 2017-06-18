@@ -42,6 +42,20 @@ matchers =
         ]
 
 
+determineApiHost : Navigation.Location -> String
+determineApiHost location =
+    case location.host of
+        "localhost:3000" ->
+            "localhost:3001"
+
+        "app.astroswarm.com" ->
+            "api.astroswarm.com"
+
+        -- Err toward the production endpoint, in case of a config error in production
+        _ ->
+            "api.astroswarm.com"
+
+
 parseLocation : Navigation.Location -> Route
 parseLocation location =
     case (UrlParser.parseHash matchers location) of
@@ -73,6 +87,7 @@ type alias Model =
     , activatingAstrolab : Bool
     , route : Route
     , astrolabs : Maybe (List AstrolabActivator.Astrolab)
+    , apiHost : String
     }
 
 
@@ -100,6 +115,7 @@ initialState location =
           , activatingAstrolab = False
           , route = parseLocation location
           , astrolabs = Nothing
+          , apiHost = determineApiHost location
           }
         , navbarCmd
         )
@@ -180,7 +196,7 @@ update message model =
             ( { model | uploaded_log_url = (toString error), uploadLogsInFlight = False }, Cmd.none )
 
         LoadAstrolabs ->
-            ( { model | loadingAstrolabs = True }, (AstrolabActivator.loadAstrolabs LoadAstrolabsComplete) )
+            ( { model | loadingAstrolabs = True }, (AstrolabActivator.loadAstrolabs model LoadAstrolabsComplete) )
 
         LoadAstrolabsComplete (Ok resources) ->
             ( { model
