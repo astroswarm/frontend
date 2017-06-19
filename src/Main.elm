@@ -16,6 +16,7 @@ import Maybe
 import Navigation
 import UrlParser exposing ((</>))
 import AstrolabActivator
+import Configurator
 import ViewAbout
 import ViewNavigation
 import ViewUploadLogs
@@ -40,20 +41,6 @@ matchers =
         , UrlParser.map UploadLogsRoute (UrlParser.s "upload-logs")
         , UrlParser.map ActivateAstrolabRoute (UrlParser.s "activate")
         ]
-
-
-determineApiHost : Navigation.Location -> String
-determineApiHost location =
-    case location.host of
-        "localhost:3000" ->
-            "localhost:3001"
-
-        "app.astroswarm.com" ->
-            "api.astroswarm.com"
-
-        -- Err toward the production endpoint, in case of a config error in production
-        _ ->
-            "api.astroswarm.com"
 
 
 parseLocation : Navigation.Location -> Route
@@ -115,7 +102,7 @@ initialState location =
           , activatingAstrolab = False
           , route = parseLocation location
           , astrolabs = Nothing
-          , apiHost = determineApiHost location
+          , apiHost = Configurator.determineApiHost location
           }
         , navbarCmd
         )
