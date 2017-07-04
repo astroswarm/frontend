@@ -11,16 +11,16 @@ import JsonApi.Resources
 
 
 type alias Astrolab =
-    { last_public_ip_address : String
-    , last_private_ip_address : String
+    { public_ip_address : String
+    , private_ip_address : String
     , last_seen_at : String
-    , last_country_name : String
-    , last_region_name : String
-    , last_city : String
-    , last_zip_code : String
-    , last_time_zone : String
-    , last_latitude : Float
-    , last_longitude : Float
+    , country_name : String
+    , region_name : String
+    , city : String
+    , zip_code : String
+    , time_zone : String
+    , latitude : Float
+    , longitude : Float
     }
 
 
@@ -33,16 +33,16 @@ loadAstrolabs model load_astrolabs_complete_msg =
 astrolabDecoder : Json.Decode.Decoder Astrolab
 astrolabDecoder =
     Json.Decode.Pipeline.decode Astrolab
-        |> Json.Decode.Pipeline.required "last-public-ip-address" Json.Decode.string
-        |> Json.Decode.Pipeline.required "last-private-ip-address" Json.Decode.string
+        |> Json.Decode.Pipeline.required "public-ip-address" Json.Decode.string
+        |> Json.Decode.Pipeline.required "private-ip-address" Json.Decode.string
         |> Json.Decode.Pipeline.required "last-seen-at" Json.Decode.string
-        |> Json.Decode.Pipeline.required "last-country-name" Json.Decode.string
-        |> Json.Decode.Pipeline.required "last-region-name" Json.Decode.string
-        |> Json.Decode.Pipeline.required "last-city" Json.Decode.string
-        |> Json.Decode.Pipeline.required "last-zip-code" Json.Decode.string
-        |> Json.Decode.Pipeline.required "last-time-zone" Json.Decode.string
-        |> Json.Decode.Pipeline.required "last-latitude" Json.Decode.float
-        |> Json.Decode.Pipeline.required "last-longitude" Json.Decode.float
+        |> Json.Decode.Pipeline.required "country-name" Json.Decode.string
+        |> Json.Decode.Pipeline.required "region-name" Json.Decode.string
+        |> Json.Decode.Pipeline.required "city" Json.Decode.string
+        |> Json.Decode.Pipeline.required "zip-code" Json.Decode.string
+        |> Json.Decode.Pipeline.required "time-zone" Json.Decode.string
+        |> Json.Decode.Pipeline.required "latitude" Json.Decode.float
+        |> Json.Decode.Pipeline.required "longitude" Json.Decode.float
 
 
 parseAstrolabs : List JsonApi.Resource -> Maybe (List Astrolab)
@@ -117,15 +117,15 @@ view model =
                             (List.map
                                 (\astrolab ->
                                     Bootstrap.Table.tr []
-                                        [ Bootstrap.Table.td [] [ Html.text astrolab.last_public_ip_address ]
-                                        , Bootstrap.Table.td [] [ Html.text astrolab.last_private_ip_address ]
+                                        [ Bootstrap.Table.td [] [ Html.text astrolab.public_ip_address ]
+                                        , Bootstrap.Table.td [] [ Html.text astrolab.private_ip_address ]
                                         , Bootstrap.Table.td [] [ Html.text astrolab.last_seen_at ]
-                                        , Bootstrap.Table.td [] [ Html.text astrolab.last_country_name ]
-                                        , Bootstrap.Table.td [] [ Html.text astrolab.last_region_name ]
-                                        , Bootstrap.Table.td [] [ Html.text astrolab.last_city ]
-                                        , Bootstrap.Table.td [] [ Html.text astrolab.last_zip_code ]
-                                        , Bootstrap.Table.td [] [ Html.text (toString astrolab.last_latitude) ]
-                                        , Bootstrap.Table.td [] [ Html.text (toString astrolab.last_longitude) ]
+                                        , Bootstrap.Table.td [] [ Html.text astrolab.country_name ]
+                                        , Bootstrap.Table.td [] [ Html.text astrolab.region_name ]
+                                        , Bootstrap.Table.td [] [ Html.text astrolab.city ]
+                                        , Bootstrap.Table.td [] [ Html.text astrolab.zip_code ]
+                                        , Bootstrap.Table.td [] [ Html.text (toString astrolab.latitude) ]
+                                        , Bootstrap.Table.td [] [ Html.text (toString astrolab.longitude) ]
                                         ]
                                 )
                                 astrolabs
