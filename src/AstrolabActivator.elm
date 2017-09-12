@@ -87,7 +87,7 @@ view model =
         [ Html.p []
             [ Html.text
                 (if model.loadingAstrolabs then
-                    "Loading unregisted Astrolabs..."
+                    "Loading unregistered Astrolabs..."
                  else
                     "Loaded."
                 )
