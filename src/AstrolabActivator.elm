@@ -2,6 +2,7 @@ module AstrolabActivator exposing (Astrolab, loadAstrolabs, parseAstrolabs, view
 
 import Bootstrap.Table
 import Html
+import Html.Attributes
 import Http
 import Json.Decode
 import Json.Decode.Pipeline
@@ -21,6 +22,8 @@ type alias Astrolab =
     , time_zone : String
     , latitude : Float
     , longitude : Float
+    , tunnel_endpoint : String
+    , local_endpoint : String
     }
 
 
@@ -43,6 +46,8 @@ astrolabDecoder =
         |> Json.Decode.Pipeline.required "time-zone" Json.Decode.string
         |> Json.Decode.Pipeline.required "latitude" Json.Decode.float
         |> Json.Decode.Pipeline.required "longitude" Json.Decode.float
+        |> Json.Decode.Pipeline.required "tunnel-endpoint" Json.Decode.string
+        |> Json.Decode.Pipeline.required "local-endpoint" Json.Decode.string
 
 
 parseAstrolabs : List JsonApi.Resource -> Maybe (List Astrolab)
@@ -100,12 +105,9 @@ view model =
                     [ Bootstrap.Table.th [] [ Html.text "Public IP" ]
                     , Bootstrap.Table.th [] [ Html.text "Private IP" ]
                     , Bootstrap.Table.th [] [ Html.text "Last Detected" ]
-                    , Bootstrap.Table.th [] [ Html.text "Country" ]
-                    , Bootstrap.Table.th [] [ Html.text "Region" ]
-                    , Bootstrap.Table.th [] [ Html.text "City" ]
-                    , Bootstrap.Table.th [] [ Html.text "Zip Code" ]
-                    , Bootstrap.Table.th [] [ Html.text "Latitude" ]
-                    , Bootstrap.Table.th [] [ Html.text "Longitude" ]
+                    , Bootstrap.Table.th [] [ Html.text "Location" ]
+                    , Bootstrap.Table.th [] [ Html.text "Local Network" ]
+                    , Bootstrap.Table.th [] [ Html.text "Public Network" ]
                     ]
             , tbody =
                 case model.astrolabs of
@@ -120,12 +122,32 @@ view model =
                                         [ Bootstrap.Table.td [] [ Html.text astrolab.public_ip_address ]
                                         , Bootstrap.Table.td [] [ Html.text astrolab.private_ip_address ]
                                         , Bootstrap.Table.td [] [ Html.text astrolab.last_seen_at ]
-                                        , Bootstrap.Table.td [] [ Html.text astrolab.country_name ]
-                                        , Bootstrap.Table.td [] [ Html.text astrolab.region_name ]
-                                        , Bootstrap.Table.td [] [ Html.text astrolab.city ]
-                                        , Bootstrap.Table.td [] [ Html.text astrolab.zip_code ]
-                                        , Bootstrap.Table.td [] [ Html.text (toString astrolab.latitude) ]
-                                        , Bootstrap.Table.td [] [ Html.text (toString astrolab.longitude) ]
+                                        , Bootstrap.Table.td []
+                                            [ Html.text
+                                                (if astrolab.city /= "" then
+                                                    (astrolab.city ++ ", " ++ astrolab.region_name)
+                                                 else
+                                                    astrolab.region_name
+                                                )
+                                            ]
+                                        , Bootstrap.Table.td []
+                                            (if astrolab.local_endpoint == "" then
+                                                [ Html.text "Not available" ]
+                                             else
+                                                [ Html.a
+                                                    [ Html.Attributes.href astrolab.local_endpoint ]
+                                                    [ Html.text "Launch" ]
+                                                ]
+                                            )
+                                        , Bootstrap.Table.td []
+                                            (if astrolab.tunnel_endpoint == "" then
+                                                [ Html.text "Not available" ]
+                                             else
+                                                [ Html.a
+                                                    [ Html.Attributes.href astrolab.tunnel_endpoint ]
+                                                    [ Html.text "Launch" ]
+                                                ]
+                                            )
                                         ]
                                 )
                                 astrolabs
