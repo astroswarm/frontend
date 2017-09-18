@@ -12,11 +12,11 @@ view :
     ( Bootstrap.Navbar.State -> msg
     , { b
         | navbarState : Bootstrap.Navbar.State
-        , selected_service_name : String
+        , selected_service_name : Maybe String
         , services : List { a | name : String }
         , selectedAstrolab : Maybe AstrolabActivator.Astrolab
       }
-    , String -> msg
+    , Maybe String -> msg
     , Bootstrap.Modal.State -> msg
     , msg
     , Maybe AstrolabActivator.Astrolab -> msg
@@ -48,7 +48,7 @@ view ( navbar_msg, model, service_select_cmd, upload_logs_modal_msg, load_astrol
                                     (List.map
                                         (\service ->
                                             Bootstrap.Navbar.dropdownItem
-                                                [ Html.Events.onClick (service_select_cmd service.name)
+                                                [ Html.Events.onClick (service_select_cmd (Just service.name))
                                                 ]
                                                 [ Html.text service.name ]
                                         )

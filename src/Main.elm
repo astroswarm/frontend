@@ -65,7 +65,7 @@ type alias Service =
 
 type alias Model =
     { services : List Service
-    , selected_service_name : String
+    , selected_service_name : Maybe String
     , uploaded_log_url : String
     , navbarState : Bootstrap.Navbar.State
     , uploadLogsModalState : Bootstrap.Modal.State
@@ -94,7 +94,7 @@ initialState location =
                 , Service "PHD2 (Autoguider)" 6102
                 , Service "Open Sky Imager (Camera Controller)" 6103
                 ]
-          , selected_service_name = "Lin Guider (Autoguider)"
+          , selected_service_name = Nothing
           , uploaded_log_url = ""
           , navbarState = navbarState
           , uploadLogsModalState = Bootstrap.Modal.hiddenState
@@ -118,7 +118,7 @@ type Msg
     = NoOp
     | OnLocationChange Navigation.Location
     | UpdateRoute Route
-    | ServiceSelect String
+    | ServiceSelect (Maybe String)
     | LogsUploaded (Result Http.Error String)
     | NavbarMsg Bootstrap.Navbar.State
     | UploadLogsModalMsg Bootstrap.Modal.State
@@ -149,7 +149,7 @@ update message model =
             case newRoute of
                 ServiceRoute string ->
                     { model | route = newRoute }
-                        |> update (ServiceSelect string)
+                        |> update (ServiceSelect (Just string))
 
                 UploadLogsRoute ->
                     model
@@ -165,11 +165,16 @@ update message model =
             ( { model | uploadLogsModalState = state }, Cmd.none )
 
         ServiceSelect new_service ->
-            if new_service /= model.selected_service_name then
-                { model | selected_service_name = new_service }
-                    |> update (UpdateRoute (ServiceRoute new_service))
-            else
-                ( model, Cmd.none )
+            case new_service of
+                Nothing ->
+                    ( model, Cmd.none )
+
+                Just string ->
+                    if Just string /= model.selected_service_name then
+                        { model | selected_service_name = Just string }
+                            |> update (UpdateRoute (ServiceRoute string))
+                    else
+                        ( model, Cmd.none )
 
         UploadLogs ->
             ( { model | uploadLogsInFlight = True }, uploadLogs model )
@@ -264,13 +269,19 @@ view model =
                 ServiceRoute service_name ->
                     Html.iframe
                         [ Html.Attributes.src
-                            ("http://localhost:6080/vnc_auto.html?host=localhost&port="
-                                ++ (List.filter (\n -> n.name == model.selected_service_name) model.services
-                                        |> List.map .websockify_port
-                                        |> List.head
-                                        |> Maybe.withDefault 0
-                                        |> toString
-                                   )
+                            (case model.selected_service_name of
+                                Nothing ->
+                                    ""
+
+                                Just string ->
+                                    ("http://localhost:6080/vnc_auto.html?host=localhost&port="
+                                        ++ (List.filter (\n -> n.name == string) model.services
+                                                |> List.map .websockify_port
+                                                |> List.head
+                                                |> Maybe.withDefault 0
+                                                |> toString
+                                           )
+                                    )
                             )
                         , Html.Attributes.height 600
                         , Html.Attributes.width 1000
