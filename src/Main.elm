@@ -75,6 +75,7 @@ type alias Model =
     , route : Route
     , astrolabs : Maybe (List AstrolabActivator.Astrolab)
     , apiHost : String
+    , selectedAstrolab : Maybe AstrolabActivator.Astrolab
     }
 
 
@@ -103,6 +104,7 @@ initialState location =
           , route = parseLocation location
           , astrolabs = Nothing
           , apiHost = Configurator.determineApiHost location
+          , selectedAstrolab = Nothing
           }
         , navbarCmd
         )
@@ -124,6 +126,7 @@ type Msg
       -- Astrolab-specific messages:
     | LoadAstrolabs
     | LoadAstrolabsComplete (Result Http.Error (List JsonApi.Resource))
+    | SelectAstrolab (Maybe AstrolabActivator.Astrolab)
     | ActivateAstrolab
     | ActivateAstrolabComplete (Result Http.Error JsonApi.Resource)
 
@@ -197,6 +200,9 @@ update message model =
             Debug.log ("Error: " ++ toString error)
                 ( { model | loadingAstrolabs = False, astrolabs = Nothing }, Cmd.none )
 
+        SelectAstrolab astrolab ->
+            ( { model | selectedAstrolab = astrolab }, Cmd.none )
+
         ActivateAstrolab ->
             model |> update NoOp
 
@@ -250,7 +256,7 @@ view model =
         viewServiceEmbed =
             case model.route of
                 ActivateAstrolabRoute ->
-                    AstrolabActivator.view model
+                    AstrolabActivator.view ( model, SelectAstrolab )
 
                 HomeRoute ->
                     ViewAbout.view
@@ -276,7 +282,7 @@ view model =
     in
         Html.div [ Html.Attributes.class "container" ]
             [ Bootstrap.CDN.stylesheet
-            , ViewNavigation.view ( NavbarMsg, model, ServiceSelect, UploadLogsModalMsg, LoadAstrolabs )
+            , ViewNavigation.view ( NavbarMsg, model, ServiceSelect, UploadLogsModalMsg, LoadAstrolabs, SelectAstrolab )
             , ViewUploadLogs.viewModal ( UploadLogsModalMsg, model, UploadLogs )
             , viewServiceEmbed
             ]

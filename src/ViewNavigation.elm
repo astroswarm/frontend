@@ -5,6 +5,7 @@ import Bootstrap.Navbar
 import Html
 import Html.Attributes
 import Html.Events
+import AstrolabActivator
 
 
 view :
@@ -13,13 +14,15 @@ view :
         | navbarState : Bootstrap.Navbar.State
         , selected_service_name : String
         , services : List { a | name : String }
+        , selectedAstrolab : Maybe AstrolabActivator.Astrolab
       }
     , String -> msg
     , Bootstrap.Modal.State -> msg
     , msg
+    , Maybe AstrolabActivator.Astrolab -> msg
     )
     -> Html.Html msg
-view ( navbar_msg, model, service_select_cmd, upload_logs_modal_msg, load_astrolabs_msg ) =
+view ( navbar_msg, model, service_select_cmd, upload_logs_modal_msg, load_astrolabs_msg, select_astrolab_msg ) =
     Html.div []
         [ Bootstrap.Navbar.config navbar_msg
             |> Bootstrap.Navbar.withAnimation
@@ -28,25 +31,38 @@ view ( navbar_msg, model, service_select_cmd, upload_logs_modal_msg, load_astrol
                 [ Bootstrap.Navbar.itemLink
                     [ Html.Attributes.href "#" ]
                     [ Html.text "About" ]
-                , Bootstrap.Navbar.itemLink
-                    [ Html.Attributes.href "#activate"
-                    , Html.Events.onClick (load_astrolabs_msg)
-                    ]
-                    [ Html.text "Activate Your Astrolab" ]
-                , Bootstrap.Navbar.dropdown
-                    { id = "serviceSelect"
-                    , toggle = Bootstrap.Navbar.dropdownToggle [] [ Html.text model.selected_service_name ]
-                    , items =
-                        (List.filter (\service -> service.name /= model.selected_service_name) model.services
-                            |> List.map
-                                (\service ->
-                                    if service.name == model.selected_service_name then
-                                        Bootstrap.Navbar.dropdownItem [] [ Html.text service.name ]
-                                    else
-                                        Bootstrap.Navbar.dropdownItem [ Html.Events.onClick (service_select_cmd service.name) ] [ Html.text service.name ]
-                                )
-                        )
-                    }
+                , (case model.selectedAstrolab of
+                    Nothing ->
+                        Bootstrap.Navbar.itemLink
+                            [ Html.Attributes.href "#activate"
+                            , Html.Events.onClick (load_astrolabs_msg)
+                            ]
+                            [ Html.text "Select Your Astrolab" ]
+
+                    Just astrolab ->
+                        Bootstrap.Navbar.dropdown
+                            { id = "serviceSelect"
+                            , toggle = Bootstrap.Navbar.dropdownToggle [] [ Html.text "Select Option" ]
+                            , items =
+                                List.append
+                                    (List.map
+                                        (\service ->
+                                            Bootstrap.Navbar.dropdownItem
+                                                [ Html.Events.onClick (service_select_cmd service.name)
+                                                ]
+                                                [ Html.text service.name ]
+                                        )
+                                        model.services
+                                    )
+                                    ([ Bootstrap.Navbar.dropdownItem
+                                        [ Html.Attributes.href "#activate"
+                                        , Html.Events.onClick (select_astrolab_msg Nothing)
+                                        ]
+                                        [ Html.text "Select Different Astrolab" ]
+                                     ]
+                                    )
+                            }
+                  )
                 , Bootstrap.Navbar.dropdown
                     { id = "getHelp"
                     , toggle = Bootstrap.Navbar.dropdownToggle [] [ Html.text "Get Help" ]

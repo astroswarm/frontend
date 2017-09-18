@@ -3,6 +3,7 @@ module AstrolabActivator exposing (Astrolab, loadAstrolabs, parseAstrolabs, view
 import Bootstrap.Table
 import Html
 import Html.Attributes
+import Html.Events
 import Http
 import Json.Decode
 import Json.Decode.Pipeline
@@ -86,8 +87,10 @@ removeErrorFromList list =
             []
 
 
-view : { model | astrolabs : Maybe (List Astrolab), loadingAstrolabs : Bool } -> Html.Html msg
-view model =
+view :
+    ( { model | astrolabs : Maybe (List Astrolab), loadingAstrolabs : Bool }, Maybe Astrolab -> msg )
+    -> Html.Html msg
+view ( model, select_astrolab_msg ) =
     Html.div []
         [ Html.p []
             [ Html.text
@@ -106,8 +109,7 @@ view model =
                     , Bootstrap.Table.th [] [ Html.text "Private IP" ]
                     , Bootstrap.Table.th [] [ Html.text "Last Detected" ]
                     , Bootstrap.Table.th [] [ Html.text "Location" ]
-                    , Bootstrap.Table.th [] [ Html.text "Local Network" ]
-                    , Bootstrap.Table.th [] [ Html.text "Public Network" ]
+                    , Bootstrap.Table.th [] [ Html.text "Select" ]
                     ]
             , tbody =
                 case model.astrolabs of
@@ -131,23 +133,12 @@ view model =
                                                 )
                                             ]
                                         , Bootstrap.Table.td []
-                                            (if astrolab.local_endpoint == "" then
-                                                [ Html.text "Not available" ]
-                                             else
-                                                [ Html.a
-                                                    [ Html.Attributes.href astrolab.local_endpoint ]
-                                                    [ Html.text "Launch" ]
+                                            [ Html.a
+                                                [ Html.Attributes.href "#"
+                                                , Html.Events.onClick (select_astrolab_msg (Just astrolab))
                                                 ]
-                                            )
-                                        , Bootstrap.Table.td []
-                                            (if astrolab.tunnel_endpoint == "" then
-                                                [ Html.text "Not available" ]
-                                             else
-                                                [ Html.a
-                                                    [ Html.Attributes.href astrolab.tunnel_endpoint ]
-                                                    [ Html.text "Launch" ]
-                                                ]
-                                            )
+                                                [ Html.text "Launch" ]
+                                            ]
                                         ]
                                 )
                                 astrolabs
