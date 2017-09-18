@@ -44,8 +44,8 @@ view ( navbar_msg, model, service_select_cmd, upload_logs_modal_msg, load_astrol
                             { id = "serviceSelect"
                             , toggle = Bootstrap.Navbar.dropdownToggle [] [ Html.text "Select Option" ]
                             , items =
-                                List.append
-                                    (List.map
+                                List.concat
+                                    [ (List.map
                                         (\service ->
                                             Bootstrap.Navbar.dropdownItem
                                                 [ Html.Events.onClick (service_select_cmd (Just service.name))
@@ -53,26 +53,25 @@ view ( navbar_msg, model, service_select_cmd, upload_logs_modal_msg, load_astrol
                                                 [ Html.text service.name ]
                                         )
                                         model.services
-                                    )
-                                    ([ Bootstrap.Navbar.dropdownItem
-                                        [ Html.Attributes.href "#activate"
-                                        , Html.Events.onClick (select_astrolab_msg Nothing)
-                                        ]
-                                        [ Html.text "Select Different Astrolab" ]
-                                     ]
-                                    )
+                                      )
+                                    , ([ Bootstrap.Navbar.dropdownDivider
+                                       , Bootstrap.Navbar.dropdownItem
+                                            [ Html.Events.onClick (upload_logs_modal_msg Bootstrap.Modal.visibleState)
+                                            ]
+                                            [ Html.text "Get Help (Upload Logs)" ]
+                                       ]
+                                      )
+                                    , ([ Bootstrap.Navbar.dropdownDivider
+                                       , Bootstrap.Navbar.dropdownItem
+                                            [ Html.Attributes.href "#activate"
+                                            , Html.Events.onClick (select_astrolab_msg Nothing)
+                                            ]
+                                            [ Html.text "Select a Different Astrolab" ]
+                                       ]
+                                      )
+                                    ]
                             }
                   )
-                , Bootstrap.Navbar.dropdown
-                    { id = "getHelp"
-                    , toggle = Bootstrap.Navbar.dropdownToggle [] [ Html.text "Get Help" ]
-                    , items =
-                        [ Bootstrap.Navbar.dropdownItem
-                            [ Html.Events.onClick (upload_logs_modal_msg Bootstrap.Modal.visibleState)
-                            ]
-                            [ Html.text "Upload Logs" ]
-                        ]
-                    }
                 ]
             |> Bootstrap.Navbar.view model.navbarState
         ]
