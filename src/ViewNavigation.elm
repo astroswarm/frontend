@@ -42,10 +42,17 @@ view ( navbar_msg, model, service_select_cmd, upload_logs_modal_msg, load_astrol
                     Just astrolab ->
                         Bootstrap.Navbar.dropdown
                             { id = "serviceSelect"
-                            , toggle = Bootstrap.Navbar.dropdownToggle [] [ Html.text "Select Option" ]
+                            , toggle = Bootstrap.Navbar.dropdownToggle [] [ Html.text "Your Astrolab" ]
                             , items =
                                 List.concat
-                                    [ (List.map
+                                    [ ([ Bootstrap.Navbar.dropdownItem
+                                            [ Html.Attributes.href "#getting-started"
+                                            ]
+                                            [ Html.text "Getting Started" ]
+                                       , Bootstrap.Navbar.dropdownDivider
+                                       ]
+                                      )
+                                    , (List.map
                                         (\service ->
                                             Bootstrap.Navbar.dropdownItem
                                                 [ Html.Events.onClick (service_select_cmd (Just service.name))

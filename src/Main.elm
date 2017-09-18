@@ -18,6 +18,7 @@ import UrlParser exposing ((</>))
 import AstrolabActivator
 import Configurator
 import ViewAbout
+import ViewGettingStarted
 import ViewNavigation
 import ViewUploadLogs
 
@@ -30,6 +31,7 @@ type Route
     | ServiceRoute String
     | UploadLogsRoute
     | ActivateAstrolabRoute
+    | GettingStartedRoute
     | NotFoundRoute
 
 
@@ -39,6 +41,7 @@ matchers =
         [ UrlParser.map HomeRoute UrlParser.top
         , UrlParser.map ServiceRoute (UrlParser.s "services" </> UrlParser.string)
         , UrlParser.map UploadLogsRoute (UrlParser.s "upload-logs")
+        , UrlParser.map GettingStartedRoute (UrlParser.s "getting-started")
         , UrlParser.map ActivateAstrolabRoute (UrlParser.s "activate")
         ]
 
@@ -265,6 +268,9 @@ view model =
 
                 HomeRoute ->
                     ViewAbout.view
+
+                GettingStartedRoute ->
+                    ViewGettingStarted.view
 
                 ServiceRoute service_name ->
                     Html.iframe

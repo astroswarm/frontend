@@ -134,7 +134,7 @@ view ( model, select_astrolab_msg ) =
                                             ]
                                         , Bootstrap.Table.td []
                                             [ Html.a
-                                                [ Html.Attributes.href "#"
+                                                [ Html.Attributes.href "#getting-started"
                                                 , Html.Events.onClick (select_astrolab_msg (Just astrolab))
                                                 ]
                                                 [ Html.text "Launch" ]
