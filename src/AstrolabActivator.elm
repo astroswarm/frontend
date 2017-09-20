@@ -1,6 +1,9 @@
 module AstrolabActivator exposing (Astrolab, loadAstrolabs, parseAstrolabs, view)
 
 import Bootstrap.Table
+import Date
+import Date.Extra.Config.Config_en_us
+import Date.Extra.Format
 import Html
 import Html.Attributes
 import Html.Events
@@ -123,7 +126,19 @@ view ( model, select_astrolab_msg ) =
                                     Bootstrap.Table.tr []
                                         [ Bootstrap.Table.td [] [ Html.text astrolab.public_ip_address ]
                                         , Bootstrap.Table.td [] [ Html.text astrolab.private_ip_address ]
-                                        , Bootstrap.Table.td [] [ Html.text astrolab.last_seen_at ]
+                                        , Bootstrap.Table.td []
+                                            [ Html.text
+                                                (case
+                                                    astrolab.last_seen_at
+                                                        |> Date.fromString
+                                                 of
+                                                    Ok date ->
+                                                        Date.Extra.Format.format Date.Extra.Config.Config_en_us.config "%a, %b %e at %l:%M %P %:z" date
+
+                                                    Err e ->
+                                                        "Unknown"
+                                                )
+                                            ]
                                         , Bootstrap.Table.td []
                                             [ Html.text
                                                 (if astrolab.city /= "" then
