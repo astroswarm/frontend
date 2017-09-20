@@ -33,7 +33,7 @@ type alias Astrolab =
 
 loadAstrolabs : { a | apiHost : String } -> (Result Http.Error (List JsonApi.Resource) -> msg) -> Cmd msg
 loadAstrolabs model load_astrolabs_complete_msg =
-    JsonApi.Http.getPrimaryResourceCollection ("http://" ++ model.apiHost ++ "/v1/astrolabs")
+    JsonApi.Http.getPrimaryResourceCollection ("http://" ++ model.apiHost ++ "/v1/astrolabs?filter[recency]=60")
         |> Http.send load_astrolabs_complete_msg
 
 
