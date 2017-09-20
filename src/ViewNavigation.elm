@@ -28,10 +28,7 @@ view ( navbar_msg, model, service_select_cmd, upload_logs_modal_msg, load_astrol
             |> Bootstrap.Navbar.withAnimation
             |> Bootstrap.Navbar.brand [ Html.Attributes.href "#" ] [ Html.text "AstroSwarm" ]
             |> Bootstrap.Navbar.items
-                [ Bootstrap.Navbar.itemLink
-                    [ Html.Attributes.href "#" ]
-                    [ Html.text "About" ]
-                , (case model.selectedAstrolab of
+                [ (case model.selectedAstrolab of
                     Nothing ->
                         Bootstrap.Navbar.itemLink
                             [ Html.Attributes.href "#activate"
