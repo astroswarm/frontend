@@ -96,13 +96,11 @@ view :
 view ( model, select_astrolab_msg ) =
     Html.div []
         [ Html.p []
-            [ Html.text
-                (if model.loadingAstrolabs then
-                    "Loading unregistered Astrolabs..."
-                 else
-                    "Loaded."
-                )
-            ]
+            (if model.loadingAstrolabs then
+                [ Html.text "Loading unregistered Astrolabs..." ]
+             else
+                []
+            )
         , Html.p [] [ Html.text "Plug your Astrolab into your router and turn it on. Wait 30 seconds, and you should see it below." ]
         , Bootstrap.Table.table
             { options = [ Bootstrap.Table.hover, Bootstrap.Table.small ]
