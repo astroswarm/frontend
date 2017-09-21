@@ -1,4 +1,4 @@
-module ViewRunApplication exposing (view)
+module ViewRunApplication exposing (view, RunningApplication)
 
 import Html
 import Html.Attributes
@@ -8,6 +8,13 @@ import Html.Events
 type alias ApplicationTemplate =
     { name : String
     , docker_image : String
+    }
+
+
+type alias RunningApplication =
+    { name : String
+    , local_websockify_hostname : String
+    , local_websockify_port : Int
     }
 
 

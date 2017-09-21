@@ -6,23 +6,24 @@ import Html
 import Html.Attributes
 import Html.Events
 import AstrolabActivator
+import ViewRunApplication
 
 
 view :
     ( Bootstrap.Navbar.State -> msg
     , { b
         | navbarState : Bootstrap.Navbar.State
-        , selected_service_name : Maybe String
-        , services : List { a | name : String }
+        , selectedApplication : Maybe ViewRunApplication.RunningApplication
+        , runningApplications : List ViewRunApplication.RunningApplication
         , selectedAstrolab : Maybe AstrolabActivator.Astrolab
       }
-    , Maybe String -> msg
+    , ViewRunApplication.RunningApplication -> msg
     , Bootstrap.Modal.State -> msg
     , msg
     , Maybe AstrolabActivator.Astrolab -> msg
     )
     -> Html.Html msg
-view ( navbar_msg, model, service_select_cmd, upload_logs_modal_msg, load_astrolabs_msg, select_astrolab_msg ) =
+view ( navbar_msg, model, application_select_msg, upload_logs_modal_msg, load_astrolabs_msg, select_astrolab_msg ) =
     Html.div []
         [ Bootstrap.Navbar.config navbar_msg
             |> Bootstrap.Navbar.withAnimation
@@ -59,13 +60,13 @@ view ( navbar_msg, model, service_select_cmd, upload_logs_modal_msg, load_astrol
                                        ]
                                       )
                                     , (List.map
-                                        (\service ->
+                                        (\application ->
                                             Bootstrap.Navbar.dropdownItem
-                                                [ Html.Events.onClick (service_select_cmd (Just service.name))
+                                                [ Html.Attributes.href ("#applications/" ++ application.name)
                                                 ]
-                                                [ Html.text service.name ]
+                                                [ Html.text application.name ]
                                         )
-                                        model.services
+                                        model.runningApplications
                                       )
                                     , ([ Bootstrap.Navbar.dropdownDivider
                                        , Bootstrap.Navbar.dropdownItem

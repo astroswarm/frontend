@@ -29,7 +29,7 @@ import ViewUploadLogs
 
 type Route
     = HomeRoute
-    | ServiceRoute String
+    | ApplicationRoute String
     | RunApplicationRoute
     | UploadLogsRoute
     | ActivateAstrolabRoute
@@ -42,7 +42,7 @@ matchers =
     UrlParser.oneOf
         [ UrlParser.map HomeRoute UrlParser.top
         , UrlParser.map RunApplicationRoute (UrlParser.s "run-application")
-        , UrlParser.map ServiceRoute (UrlParser.s "services" </> UrlParser.string)
+        , UrlParser.map ApplicationRoute (UrlParser.s "applications" </> UrlParser.string)
         , UrlParser.map UploadLogsRoute (UrlParser.s "upload-logs")
         , UrlParser.map GettingStartedRoute (UrlParser.s "getting-started")
         , UrlParser.map ActivateAstrolabRoute (UrlParser.s "activate")
@@ -63,15 +63,10 @@ parseLocation location =
 -- Model
 
 
-type alias Service =
-    { name : String
-    , websockify_port : Int
-    }
-
-
 type alias Model =
-    { services : List Service
-    , selected_service_name : Maybe String
+    { lastLocation : Navigation.Location
+    , selectedApplication : Maybe ViewRunApplication.RunningApplication
+    , runningApplications : List ViewRunApplication.RunningApplication
     , uploaded_log_url : String
     , navbarState : Bootstrap.Navbar.State
     , uploadLogsModalState : Bootstrap.Modal.State
@@ -95,12 +90,9 @@ initialState location =
         ( navbarState, navbarCmd ) =
             Bootstrap.Navbar.initialState NavbarMsg
     in
-        ( { services =
-                [ Service "Lin Guider (Autoguider)" 6101
-                , Service "PHD2 (Autoguider)" 6102
-                , Service "Open Sky Imager (Camera Controller)" 6103
-                ]
-          , selected_service_name = Nothing
+        ( { lastLocation = location
+          , selectedApplication = Nothing
+          , runningApplications = []
           , uploaded_log_url = ""
           , navbarState = navbarState
           , uploadLogsModalState = Bootstrap.Modal.hiddenState
@@ -124,13 +116,15 @@ type Msg
     = NoOp
     | OnLocationChange Navigation.Location
     | UpdateRoute Route
+    | DetermineRunningApplications
+    | HandleDetermineRunningApplications (Result Http.Error (List ViewRunApplication.RunningApplication))
     | StartApplication String
     | HandleStartApplication (Result Http.Error String)
     | StopApplication String
     | HandleStopApplication (Result Http.Error String)
     | CleanApplication String
     | HandleCleanApplication (Result Http.Error String)
-    | ServiceSelect (Maybe String)
+    | ApplicationSelect ViewRunApplication.RunningApplication
     | LogsUploaded (Result Http.Error String)
     | NavbarMsg Bootstrap.Navbar.State
     | UploadLogsModalMsg Bootstrap.Modal.State
@@ -141,6 +135,17 @@ type Msg
     | SelectAstrolab (Maybe AstrolabActivator.Astrolab)
     | ActivateAstrolab
     | ActivateAstrolabComplete (Result Http.Error JsonApi.Resource)
+
+
+applicationFromName : String -> List ViewRunApplication.RunningApplication -> Maybe ViewRunApplication.RunningApplication
+applicationFromName name applications =
+    List.head
+        (List.filter
+            (\app ->
+                app.name == name
+            )
+            applications
+        )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -154,21 +159,30 @@ update message model =
                 newRoute =
                     parseLocation location
             in
-                { model | route = newRoute }
+                { model | route = newRoute, lastLocation = location }
                     |> update (UpdateRoute newRoute)
 
         UpdateRoute newRoute ->
-            case newRoute of
-                ServiceRoute string ->
-                    { model | route = newRoute }
-                        |> update (ServiceSelect (Just string))
+            if newRoute /= parseLocation model.lastLocation then
+                case newRoute of
+                    ApplicationRoute string ->
+                        (case (applicationFromName string model.runningApplications) of
+                            Just application ->
+                                { model | route = newRoute }
+                                    |> update (ApplicationSelect application)
 
-                UploadLogsRoute ->
-                    model
-                        |> update (UploadLogsModalMsg Bootstrap.Modal.visibleState)
+                            Nothing ->
+                                ( model, Cmd.none )
+                        )
 
-                _ ->
-                    ( { model | route = newRoute }, Cmd.none )
+                    UploadLogsRoute ->
+                        model
+                            |> update (UploadLogsModalMsg Bootstrap.Modal.visibleState)
+
+                    _ ->
+                        ( { model | route = newRoute }, Cmd.none )
+            else
+                ( model, Cmd.none )
 
         NavbarMsg state ->
             ( { model | navbarState = state }, Cmd.none )
@@ -176,17 +190,21 @@ update message model =
         UploadLogsModalMsg state ->
             ( { model | uploadLogsModalState = state }, Cmd.none )
 
-        ServiceSelect new_service ->
-            case new_service of
-                Nothing ->
-                    ( model, Cmd.none )
+        ApplicationSelect running_application ->
+            ({ model | selectedApplication = Just running_application }
+                |> update (UpdateRoute (ApplicationRoute (running_application.name)))
+            )
 
-                Just string ->
-                    if Just string /= model.selected_service_name then
-                        { model | selected_service_name = Just string }
-                            |> update (UpdateRoute (ServiceRoute string))
-                    else
-                        ( model, Cmd.none )
+        DetermineRunningApplications ->
+            ( model
+            , Http.send HandleDetermineRunningApplications (determineRunningApplications model.selectedAstrolab)
+            )
+
+        HandleDetermineRunningApplications (Ok running_applications_list) ->
+            ( { model | runningApplications = running_applications_list }, Cmd.none )
+
+        HandleDetermineRunningApplications (Err err) ->
+            ( model, Cmd.none )
 
         StartApplication docker_image ->
             ( model
@@ -251,7 +269,9 @@ update message model =
                 ( { model | loadingAstrolabs = False, astrolabs = Nothing }, Cmd.none )
 
         SelectAstrolab astrolab ->
-            ( { model | selectedAstrolab = astrolab }, Cmd.none )
+            ({ model | selectedAstrolab = astrolab }
+                |> update DetermineRunningApplications
+            )
 
         ActivateAstrolab ->
             model |> update NoOp
@@ -298,6 +318,32 @@ uploadLogs model =
 
 
 -- APPLICATION HANDLING
+
+
+runningApplicationDecoder : Json.Decode.Decoder ViewRunApplication.RunningApplication
+runningApplicationDecoder =
+    Json.Decode.map3 ViewRunApplication.RunningApplication
+        (Json.Decode.field "name" Json.Decode.string)
+        (Json.Decode.field "local_websockify_hostname" Json.Decode.string)
+        (Json.Decode.field "local_websockify_port" Json.Decode.int)
+
+
+determineRunningApplicationsResponseDecoder : Json.Decode.Decoder (List ViewRunApplication.RunningApplication)
+determineRunningApplicationsResponseDecoder =
+    Json.Decode.list runningApplicationDecoder
+
+
+determineRunningApplications : Maybe AstrolabActivator.Astrolab -> Http.Request (List ViewRunApplication.RunningApplication)
+determineRunningApplications maybe_astrolab =
+    Http.get
+        (case maybe_astrolab of
+            Just astrolab ->
+                astrolab.local_endpoint ++ "/api/running_xapplications"
+
+            Nothing ->
+                "http://localhost"
+        )
+        determineRunningApplicationsResponseDecoder
 
 
 applicationSpecifierEncoder : String -> Json.Encode.Value
@@ -356,6 +402,14 @@ cleanApplication maybe_astrolab docker_image =
 -- VIEW
 
 
+vncIframeSrcForApplication : ViewRunApplication.RunningApplication -> String
+vncIframeSrcForApplication app =
+    "http://novnc.com/noVNC/vnc_auto.html?host="
+        ++ app.local_websockify_hostname
+        ++ "&port="
+        ++ toString app.local_websockify_port
+
+
 view : Model -> Html.Html Msg
 view model =
     let
@@ -373,34 +427,27 @@ view model =
                 RunApplicationRoute ->
                     ViewRunApplication.view ( StartApplication, StopApplication, CleanApplication )
 
-                ServiceRoute service_name ->
-                    Html.iframe
-                        [ Html.Attributes.src
-                            (case model.selected_service_name of
-                                Nothing ->
-                                    ""
+                ApplicationRoute running_application ->
+                    (case (applicationFromName running_application model.runningApplications) of
+                        Just application ->
+                            Html.iframe
+                                [ Html.Attributes.src
+                                    (vncIframeSrcForApplication application)
+                                , Html.Attributes.height 600
+                                , Html.Attributes.width 1000
+                                ]
+                                []
 
-                                Just string ->
-                                    ("http://localhost:6080/vnc_auto.html?host=localhost&port="
-                                        ++ (List.filter (\n -> n.name == string) model.services
-                                                |> List.map .websockify_port
-                                                |> List.head
-                                                |> Maybe.withDefault 0
-                                                |> toString
-                                           )
-                                    )
-                            )
-                        , Html.Attributes.height 600
-                        , Html.Attributes.width 1000
-                        ]
-                        []
+                        Nothing ->
+                            Html.div [] []
+                    )
 
                 _ ->
                     Html.text "Nothing yet"
     in
         Html.div [ Html.Attributes.class "container" ]
             [ Bootstrap.CDN.stylesheet
-            , ViewNavigation.view ( NavbarMsg, model, ServiceSelect, UploadLogsModalMsg, LoadAstrolabs, SelectAstrolab )
+            , ViewNavigation.view ( NavbarMsg, model, ApplicationSelect, UploadLogsModalMsg, LoadAstrolabs, SelectAstrolab )
             , ViewUploadLogs.viewModal ( UploadLogsModalMsg, model, UploadLogs )
             , viewServiceEmbed
             ]
