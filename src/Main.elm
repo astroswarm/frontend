@@ -20,6 +20,7 @@ import Configurator
 import ViewAbout
 import ViewGettingStarted
 import ViewNavigation
+import ViewRunApplication
 import ViewUploadLogs
 
 
@@ -29,6 +30,7 @@ import ViewUploadLogs
 type Route
     = HomeRoute
     | ServiceRoute String
+    | RunApplicationRoute
     | UploadLogsRoute
     | ActivateAstrolabRoute
     | GettingStartedRoute
@@ -39,6 +41,7 @@ matchers : UrlParser.Parser (Route -> a) a
 matchers =
     UrlParser.oneOf
         [ UrlParser.map HomeRoute UrlParser.top
+        , UrlParser.map RunApplicationRoute (UrlParser.s "run-application")
         , UrlParser.map ServiceRoute (UrlParser.s "services" </> UrlParser.string)
         , UrlParser.map UploadLogsRoute (UrlParser.s "upload-logs")
         , UrlParser.map GettingStartedRoute (UrlParser.s "getting-started")
@@ -121,6 +124,12 @@ type Msg
     = NoOp
     | OnLocationChange Navigation.Location
     | UpdateRoute Route
+    | StartApplication String
+    | HandleStartApplication (Result Http.Error String)
+    | StopApplication String
+    | HandleStopApplication (Result Http.Error String)
+    | CleanApplication String
+    | HandleCleanApplication (Result Http.Error String)
     | ServiceSelect (Maybe String)
     | LogsUploaded (Result Http.Error String)
     | NavbarMsg Bootstrap.Navbar.State
@@ -178,6 +187,39 @@ update message model =
                             |> update (UpdateRoute (ServiceRoute string))
                     else
                         ( model, Cmd.none )
+
+        StartApplication docker_image ->
+            ( model
+            , Http.send HandleStartApplication (startApplication model.selectedAstrolab docker_image)
+            )
+
+        HandleStartApplication (Ok response) ->
+            ( model, Cmd.none )
+
+        HandleStartApplication (Err err) ->
+            ( model, Cmd.none )
+
+        StopApplication docker_image ->
+            ( model
+            , Http.send HandleStopApplication (stopApplication model.selectedAstrolab docker_image)
+            )
+
+        HandleStopApplication (Ok response) ->
+            ( model, Cmd.none )
+
+        HandleStopApplication (Err err) ->
+            ( model, Cmd.none )
+
+        CleanApplication docker_image ->
+            ( model
+            , Http.send HandleCleanApplication (cleanApplication model.selectedAstrolab docker_image)
+            )
+
+        HandleCleanApplication (Ok response) ->
+            ( model, Cmd.none )
+
+        HandleCleanApplication (Err err) ->
+            ( model, Cmd.none )
 
         UploadLogs ->
             ( { model | uploadLogsInFlight = True }, uploadLogs model )
@@ -255,6 +297,62 @@ uploadLogs model =
 
 
 
+-- APPLICATION HANDLING
+
+
+applicationSpecifierEncoder : String -> Json.Encode.Value
+applicationSpecifierEncoder docker_image =
+    Json.Encode.object [ ( "image", Json.Encode.string docker_image ) ]
+
+
+applicationSpecifierResponseDecoder : Json.Decode.Decoder String
+applicationSpecifierResponseDecoder =
+    Json.Decode.field "status" Json.Decode.string
+
+
+startApplication : Maybe AstrolabActivator.Astrolab -> String -> Http.Request String
+startApplication maybe_astrolab docker_image =
+    Http.post
+        (case maybe_astrolab of
+            Just astrolab ->
+                astrolab.local_endpoint ++ "/api/start_xapplication"
+
+            Nothing ->
+                "http://localhost"
+        )
+        (Http.stringBody "application/json" <| Json.Encode.encode 0 <| applicationSpecifierEncoder docker_image)
+        (applicationSpecifierResponseDecoder)
+
+
+stopApplication : Maybe AstrolabActivator.Astrolab -> String -> Http.Request String
+stopApplication maybe_astrolab docker_image =
+    Http.post
+        (case maybe_astrolab of
+            Just astrolab ->
+                astrolab.local_endpoint ++ "/api/stop_xapplication"
+
+            Nothing ->
+                "http://localhost"
+        )
+        (Http.stringBody "application/json" <| Json.Encode.encode 0 <| applicationSpecifierEncoder docker_image)
+        (applicationSpecifierResponseDecoder)
+
+
+cleanApplication : Maybe AstrolabActivator.Astrolab -> String -> Http.Request String
+cleanApplication maybe_astrolab docker_image =
+    Http.post
+        (case maybe_astrolab of
+            Just astrolab ->
+                astrolab.local_endpoint ++ "/api/clean_xapplication"
+
+            Nothing ->
+                "http://localhost"
+        )
+        (Http.stringBody "application/json" <| Json.Encode.encode 0 <| applicationSpecifierEncoder docker_image)
+        (applicationSpecifierResponseDecoder)
+
+
+
 -- VIEW
 
 
@@ -271,6 +369,9 @@ view model =
 
                 GettingStartedRoute ->
                     ViewGettingStarted.view
+
+                RunApplicationRoute ->
+                    ViewRunApplication.view ( StartApplication, StopApplication, CleanApplication )
 
                 ServiceRoute service_name ->
                     Html.iframe
