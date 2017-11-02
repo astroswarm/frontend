@@ -60,6 +60,15 @@ parseLocation location =
 
 
 
+-- Constants
+
+
+astrolabDetectionIntervalInSeconds : number
+astrolabDetectionIntervalInSeconds =
+    3
+
+
+
 -- Model
 
 
@@ -470,7 +479,11 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
         [ Bootstrap.Navbar.subscriptions model.navbarState NavbarMsg
-        , Time.every (3 * Time.second) (always LoadAstrolabs)
+        , (if model.route == ActivateAstrolabRoute then
+            Time.every (astrolabDetectionIntervalInSeconds * Time.second) (always LoadAstrolabs)
+           else
+            Sub.none
+          )
         ]
 
 
