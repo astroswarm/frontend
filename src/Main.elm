@@ -3,7 +3,6 @@
 
 module Main exposing (..)
 
-import Bootstrap.CDN
 import Bootstrap.Modal
 import Bootstrap.Navbar
 import Html
@@ -446,7 +445,11 @@ view model =
                     Html.text "Nothing yet"
     in
         Html.div [ Html.Attributes.class "container" ]
-            [ Bootstrap.CDN.stylesheet
+            [ Html.node "link"
+                [ Html.Attributes.rel "stylesheet"
+                , Html.Attributes.href "/bootstrap-4.0.0-alpha.6.min.css"
+                ]
+                []
             , ViewNavigation.view ( NavbarMsg, model, ApplicationSelect, UploadLogsModalMsg, LoadAstrolabs, SelectAstrolab )
             , ViewUploadLogs.viewModal ( UploadLogsModalMsg, model, UploadLogs )
             , viewServiceEmbed
