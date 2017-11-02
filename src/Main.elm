@@ -13,6 +13,7 @@ import Json.Decode
 import Json.Encode
 import Maybe
 import Navigation
+import Time exposing (Time)
 import UrlParser exposing ((</>))
 import AstrolabActivator
 import Configurator
@@ -450,6 +451,11 @@ view model =
                 , Html.Attributes.href "/bootstrap-4.0.0-alpha.6.min.css"
                 ]
                 []
+            , Html.node "link"
+                [ Html.Attributes.rel "stylesheet"
+                , Html.Attributes.href "/font-awesome-4.7.0.min.css"
+                ]
+                []
             , ViewNavigation.view ( NavbarMsg, model, ApplicationSelect, UploadLogsModalMsg, LoadAstrolabs, SelectAstrolab )
             , ViewUploadLogs.viewModal ( UploadLogsModalMsg, model, UploadLogs )
             , viewServiceEmbed
@@ -462,7 +468,10 @@ view model =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Bootstrap.Navbar.subscriptions model.navbarState NavbarMsg
+    Sub.batch
+        [ Bootstrap.Navbar.subscriptions model.navbarState NavbarMsg
+        , Time.every (3 * Time.second) (always LoadAstrolabs)
+        ]
 
 
 main : Program Never Model Msg

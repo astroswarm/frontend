@@ -97,7 +97,9 @@ view ( model, select_astrolab_msg ) =
     Html.div []
         [ Html.p []
             (if model.loadingAstrolabs then
-                [ Html.text "Loading unregistered Astrolabs..." ]
+                [ Html.i [ Html.Attributes.class "fa fa-spinner fa-spin fa-3x fa-fw" ] []
+                , Html.span [ Html.Attributes.class "sr-only" ] [ Html.text "Loading..." ]
+                ]
              else
                 []
             )

@@ -20,8 +20,8 @@ type alias RunningApplication =
 
 applicationTemplates : List ApplicationTemplate
 applicationTemplates =
-    [ ApplicationTemplate "PHD Guiding" "astroswarm/phd2-x86_64:latest"
-    , ApplicationTemplate "Open Sky Imager" "astroswarm/openskyimager-x86_64:latest"
+    [ ApplicationTemplate "PHD Guiding" "astroswarm/phd2:latest"
+    , ApplicationTemplate "Open Sky Imager" "astroswarm/openskyimager:latest"
     ]
 
 
