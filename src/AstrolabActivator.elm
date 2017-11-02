@@ -96,14 +96,16 @@ view :
 view ( model, select_astrolab_msg ) =
     Html.div []
         [ Html.p []
-            (if model.loadingAstrolabs then
-                [ Html.i [ Html.Attributes.class "fa fa-spinner fa-spin fa-3x fa-fw" ] []
-                , Html.span [ Html.Attributes.class "sr-only" ] [ Html.text "Loading..." ]
-                ]
-             else
-                []
+            ([ Html.text "Plug your Astrolab into your router and turn it on. Wait 30 seconds, and you should see it below."
+             ]
+                ++ (if model.loadingAstrolabs then
+                        [ Html.i [ Html.Attributes.class "fa fa-spinner fa-spin fa-fw" ] []
+                        , Html.span [ Html.Attributes.class "sr-only" ] [ Html.text "Loading..." ]
+                        ]
+                    else
+                        []
+                   )
             )
-        , Html.p [] [ Html.text "Plug your Astrolab into your router and turn it on. Wait 30 seconds, and you should see it below." ]
         , Bootstrap.Table.table
             { options = [ Bootstrap.Table.hover, Bootstrap.Table.small ]
             , thead =
