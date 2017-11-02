@@ -68,6 +68,11 @@ astrolabDetectionIntervalInSeconds =
     3
 
 
+runningApplicationIntervalInSeconds : number
+runningApplicationIntervalInSeconds =
+    2
+
+
 
 -- Model
 
@@ -481,6 +486,11 @@ subscriptions model =
         [ Bootstrap.Navbar.subscriptions model.navbarState NavbarMsg
         , (if model.route == ActivateAstrolabRoute then
             Time.every (astrolabDetectionIntervalInSeconds * Time.second) (always LoadAstrolabs)
+           else
+            Sub.none
+          )
+        , (if model.selectedAstrolab /= Nothing then
+            Time.every (runningApplicationIntervalInSeconds * Time.second) (always DetermineRunningApplications)
            else
             Sub.none
           )
