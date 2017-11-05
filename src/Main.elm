@@ -371,7 +371,13 @@ uploadLogs model =
                 |> Http.jsonBody
 
         url =
-            "http://localhost:5000/api/execute_command"
+            (case model.selectedAstrolab of
+                Just astrolab ->
+                    astrolab.local_endpoint ++ "/api/execute_command"
+
+                Nothing ->
+                    "http://localhost"
+            )
     in
         Http.post url body logsUploadedDecoder
             |> Http.send LogsUploaded
