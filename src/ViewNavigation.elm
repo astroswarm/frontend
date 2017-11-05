@@ -7,23 +7,25 @@ import Html.Attributes
 import Html.Events
 import AstrolabActivator
 import ViewRunApplication
+import ViewRunWebApplication
 
 
 view :
     ( Bootstrap.Navbar.State -> msg
     , { b
         | navbarState : Bootstrap.Navbar.State
-        , selectedApplication : Maybe ViewRunApplication.RunningApplication
         , runningApplications : List ViewRunApplication.RunningApplication
+        , runningWebApplications : List ViewRunWebApplication.RunningWebApplication
         , selectedAstrolab : Maybe AstrolabActivator.Astrolab
       }
     , ViewRunApplication.RunningApplication -> msg
+    , ViewRunWebApplication.RunningWebApplication -> msg
     , Bootstrap.Modal.State -> msg
     , msg
     , Maybe AstrolabActivator.Astrolab -> msg
     )
     -> Html.Html msg
-view ( navbar_msg, model, application_select_msg, upload_logs_modal_msg, load_astrolabs_msg, select_astrolab_msg ) =
+view ( navbar_msg, model, application_select_msg, web_application_select_msg, upload_logs_modal_msg, load_astrolabs_msg, select_astrolab_msg ) =
     Html.div []
         [ Bootstrap.Navbar.config navbar_msg
             |> Bootstrap.Navbar.withAnimation
@@ -74,6 +76,19 @@ view ( navbar_msg, model, application_select_msg, upload_logs_modal_msg, load_as
                                             ]
                                             [ Html.text "Get Help (Upload Logs)" ]
                                        ]
+                                      )
+                                    , ([ Bootstrap.Navbar.dropdownDivider
+                                       , Bootstrap.Navbar.dropdownHeader [ Html.text "Developer Tools" ]
+                                       ]
+                                      )
+                                    , (List.map
+                                        (\application ->
+                                            Bootstrap.Navbar.dropdownItem
+                                                [ Html.Attributes.href ("#webapplications/" ++ application.slug)
+                                                ]
+                                                [ Html.text application.name ]
+                                        )
+                                        model.runningWebApplications
                                       )
                                     , ([ Bootstrap.Navbar.dropdownDivider
                                        , Bootstrap.Navbar.dropdownItem

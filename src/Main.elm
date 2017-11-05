@@ -21,6 +21,7 @@ import ViewAbout
 import ViewGettingStarted
 import ViewNavigation
 import ViewRunApplication
+import ViewRunWebApplication
 import ViewUploadLogs
 
 
@@ -30,6 +31,7 @@ import ViewUploadLogs
 type Route
     = HomeRoute
     | ApplicationRoute String
+    | WebApplicationRoute String
     | RunApplicationRoute
     | UploadLogsRoute
     | ActivateAstrolabRoute
@@ -43,6 +45,7 @@ matchers =
         [ UrlParser.map HomeRoute UrlParser.top
         , UrlParser.map RunApplicationRoute (UrlParser.s "run-application")
         , UrlParser.map ApplicationRoute (UrlParser.s "applications" </> UrlParser.string)
+        , UrlParser.map WebApplicationRoute (UrlParser.s "webapplications" </> UrlParser.string)
         , UrlParser.map UploadLogsRoute (UrlParser.s "upload-logs")
         , UrlParser.map GettingStartedRoute (UrlParser.s "getting-started")
         , UrlParser.map ActivateAstrolabRoute (UrlParser.s "activate")
@@ -81,6 +84,8 @@ type alias Model =
     { lastLocation : Navigation.Location
     , selectedApplication : Maybe ViewRunApplication.RunningApplication
     , runningApplications : List ViewRunApplication.RunningApplication
+    , selectedWebApplication : Maybe ViewRunWebApplication.RunningWebApplication
+    , runningWebApplications : List ViewRunWebApplication.RunningWebApplication
     , uploaded_log_url : String
     , navbarState : Bootstrap.Navbar.State
     , uploadLogsModalState : Bootstrap.Modal.State
@@ -107,6 +112,8 @@ initialState location =
         ( { lastLocation = location
           , selectedApplication = Nothing
           , runningApplications = []
+          , selectedWebApplication = Nothing
+          , runningWebApplications = []
           , uploaded_log_url = ""
           , navbarState = navbarState
           , uploadLogsModalState = Bootstrap.Modal.hiddenState
@@ -132,6 +139,8 @@ type Msg
     | UpdateRoute Route
     | DetermineRunningApplications
     | HandleDetermineRunningApplications (Result Http.Error (List ViewRunApplication.RunningApplication))
+    | DetermineRunningWebApplications
+    | HandleDetermineRunningWebApplications (Result Http.Error (List ViewRunWebApplication.RunningWebApplication))
     | StartApplication String
     | HandleStartApplication (Result Http.Error String)
     | StopApplication String
@@ -139,6 +148,7 @@ type Msg
     | CleanApplication String
     | HandleCleanApplication (Result Http.Error String)
     | ApplicationSelect ViewRunApplication.RunningApplication
+    | WebApplicationSelect ViewRunWebApplication.RunningWebApplication
     | LogsUploaded (Result Http.Error String)
     | NavbarMsg Bootstrap.Navbar.State
     | UploadLogsModalMsg Bootstrap.Modal.State
@@ -157,6 +167,17 @@ applicationFromName name applications =
         (List.filter
             (\app ->
                 app.name == name
+            )
+            applications
+        )
+
+
+webApplicationFromSlug : String -> List ViewRunWebApplication.RunningWebApplication -> Maybe ViewRunWebApplication.RunningWebApplication
+webApplicationFromSlug slug applications =
+    List.head
+        (List.filter
+            (\app ->
+                app.slug == slug
             )
             applications
         )
@@ -189,6 +210,16 @@ update message model =
                                 ( model, Cmd.none )
                         )
 
+                    WebApplicationRoute string ->
+                        (case (webApplicationFromSlug string model.runningWebApplications) of
+                            Just application ->
+                                { model | route = newRoute }
+                                    |> update (WebApplicationSelect application)
+
+                            Nothing ->
+                                ( model, Cmd.none )
+                        )
+
                     UploadLogsRoute ->
                         model
                             |> update (UploadLogsModalMsg Bootstrap.Modal.visibleState)
@@ -209,15 +240,31 @@ update message model =
                 |> update (UpdateRoute (ApplicationRoute (running_application.name)))
             )
 
+        WebApplicationSelect running_web_application ->
+            ({ model | selectedWebApplication = Just running_web_application }
+                |> update (UpdateRoute (WebApplicationRoute (running_web_application.name)))
+            )
+
         DetermineRunningApplications ->
             ( model
             , Http.send HandleDetermineRunningApplications (determineRunningApplications model.selectedAstrolab)
             )
 
         HandleDetermineRunningApplications (Ok running_applications_list) ->
-            ( { model | runningApplications = running_applications_list }, Cmd.none )
+            ({ model | runningApplications = running_applications_list } |> update DetermineRunningWebApplications)
 
         HandleDetermineRunningApplications (Err err) ->
+            ( model, Cmd.none )
+
+        DetermineRunningWebApplications ->
+            ( model
+            , Http.send HandleDetermineRunningWebApplications (determineRunningWebApplications model.selectedAstrolab)
+            )
+
+        HandleDetermineRunningWebApplications (Ok running_web_applications_list) ->
+            ( { model | runningWebApplications = running_web_applications_list }, Cmd.none )
+
+        HandleDetermineRunningWebApplications (Err err) ->
             ( model, Cmd.none )
 
         StartApplication docker_image ->
@@ -360,6 +407,32 @@ determineRunningApplications maybe_astrolab =
         determineRunningApplicationsResponseDecoder
 
 
+runningWebApplicationDecoder : Json.Decode.Decoder ViewRunWebApplication.RunningWebApplication
+runningWebApplicationDecoder =
+    Json.Decode.map3 ViewRunWebApplication.RunningWebApplication
+        (Json.Decode.field "name" Json.Decode.string)
+        (Json.Decode.field "local_endpoint" Json.Decode.string)
+        (Json.Decode.field "slug" Json.Decode.string)
+
+
+determineRunningWebApplicationsResponseDecoder : Json.Decode.Decoder (List ViewRunWebApplication.RunningWebApplication)
+determineRunningWebApplicationsResponseDecoder =
+    Json.Decode.list runningWebApplicationDecoder
+
+
+determineRunningWebApplications : Maybe AstrolabActivator.Astrolab -> Http.Request (List ViewRunWebApplication.RunningWebApplication)
+determineRunningWebApplications maybe_astrolab =
+    Http.get
+        (case maybe_astrolab of
+            Just astrolab ->
+                astrolab.local_endpoint ++ "/api/running_webapplications"
+
+            Nothing ->
+                "http://localhost"
+        )
+        determineRunningWebApplicationsResponseDecoder
+
+
 applicationSpecifierEncoder : String -> Json.Encode.Value
 applicationSpecifierEncoder docker_image =
     Json.Encode.object [ ( "image", Json.Encode.string docker_image ) ]
@@ -424,6 +497,11 @@ vncIframeSrcForApplication app =
         ++ toString app.local_websockify_port
 
 
+httpIframeSrcForWebApplication : ViewRunWebApplication.RunningWebApplication -> String
+httpIframeSrcForWebApplication app =
+    app.local_endpoint
+
+
 view : Model -> Html.Html Msg
 view model =
     let
@@ -456,6 +534,21 @@ view model =
                             Html.div [] []
                     )
 
+                WebApplicationRoute running_web_application ->
+                    (case (webApplicationFromSlug running_web_application model.runningWebApplications) of
+                        Just application ->
+                            Html.iframe
+                                [ Html.Attributes.src
+                                    (httpIframeSrcForWebApplication application)
+                                , Html.Attributes.height 600
+                                , Html.Attributes.width 1000
+                                ]
+                                []
+
+                        Nothing ->
+                            Html.div [] []
+                    )
+
                 _ ->
                     Html.text "Nothing yet"
     in
@@ -470,7 +563,7 @@ view model =
                 , Html.Attributes.href "/font-awesome-4.7.0.min.css"
                 ]
                 []
-            , ViewNavigation.view ( NavbarMsg, model, ApplicationSelect, UploadLogsModalMsg, LoadAstrolabs, SelectAstrolab )
+            , ViewNavigation.view ( NavbarMsg, model, ApplicationSelect, WebApplicationSelect, UploadLogsModalMsg, LoadAstrolabs, SelectAstrolab )
             , ViewUploadLogs.viewModal ( UploadLogsModalMsg, model, UploadLogs )
             , viewServiceEmbed
             ]
