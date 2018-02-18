@@ -303,13 +303,8 @@ update message model =
         UploadLogs ->
             ( { model | uploadLogsInFlight = True }, uploadLogs model )
 
-        LogsUploaded (Ok output) ->
-            let
-                url =
-                    output
-                        |> String.filter (\c -> c /= '\n')
-            in
-                ( { model | uploaded_log_url = url, uploadLogsInFlight = False }, Cmd.none )
+        LogsUploaded (Ok url) ->
+            ( { model | uploaded_log_url = url, uploadLogsInFlight = False }, Cmd.none )
 
         LogsUploaded (Err error) ->
             ( { model | uploaded_log_url = (toString error), uploadLogsInFlight = False }, Cmd.none )
@@ -350,7 +345,7 @@ update message model =
 
 logsUploadedDecoder : Json.Decode.Decoder String
 logsUploadedDecoder =
-    Json.Decode.field "output" Json.Decode.string
+    Json.Decode.field "url" Json.Decode.string
 
 
 uploadLogs : Model -> Cmd Msg
@@ -358,22 +353,13 @@ uploadLogs model =
     let
         body =
             Json.Encode.object
-                [ ( "command", Json.Encode.string "pastebinit" )
-                , ( "args"
-                  , Json.Encode.list
-                        ([ Json.Encode.string "-b"
-                         , Json.Encode.string "sprunge.us"
-                         , Json.Encode.string "/mnt/host/var/log/syslog"
-                         ]
-                        )
-                  )
-                ]
+                []
                 |> Http.jsonBody
 
         url =
             (case model.selectedAstrolab of
                 Just astrolab ->
-                    astrolab.local_endpoint ++ "/api/execute_command"
+                    astrolab.local_endpoint ++ "/api/upload_logs"
 
                 Nothing ->
                     "http://localhost"
