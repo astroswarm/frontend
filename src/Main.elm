@@ -497,7 +497,7 @@ cleanApplication maybe_astrolab docker_image =
 
 vncIframeSrcForApplication : ViewRunApplication.RunningApplication -> String
 vncIframeSrcForApplication app =
-    "http://novnc.com/noVNC/vnc_auto.html?host="
+    "http://novnc.com/noVNC/vnc.html?autoconnect=true&reconnect=true&host="
         ++ app.local_websockify_hostname
         ++ "&port="
         ++ toString app.local_websockify_port
