@@ -8,17 +8,14 @@ import Bootstrap.Navbar
 import Html
 import Html.Attributes
 import Http
-import JsonApi
 import Json.Decode
 import Json.Encode
 import Maybe
 import Navigation
 import Time exposing (Time)
 import UrlParser exposing ((</>))
-import AstrolabActivator
 import Configurator
 import ViewAbout
-import ViewGettingStarted
 import ViewNavigation
 import ViewRunApplication
 import ViewRunWebApplication
@@ -34,8 +31,6 @@ type Route
     | WebApplicationRoute String
     | RunApplicationRoute
     | UploadLogsRoute
-    | ActivateAstrolabRoute
-    | GettingStartedRoute
     | NotFoundRoute
 
 
@@ -47,8 +42,6 @@ matchers =
         , UrlParser.map ApplicationRoute (UrlParser.s "applications" </> UrlParser.string)
         , UrlParser.map WebApplicationRoute (UrlParser.s "webapplications" </> UrlParser.string)
         , UrlParser.map UploadLogsRoute (UrlParser.s "upload-logs")
-        , UrlParser.map GettingStartedRoute (UrlParser.s "getting-started")
-        , UrlParser.map ActivateAstrolabRoute (UrlParser.s "activate")
         ]
 
 
@@ -64,11 +57,6 @@ parseLocation location =
 
 
 -- Constants
-
-
-astrolabDetectionIntervalInSeconds : number
-astrolabDetectionIntervalInSeconds =
-    3
 
 
 runningApplicationIntervalInSeconds : number
@@ -90,12 +78,8 @@ type alias Model =
     , navbarState : Bootstrap.Navbar.State
     , uploadLogsModalState : Bootstrap.Modal.State
     , uploadLogsInFlight : Bool
-    , loadingAstrolabs : Bool
-    , activatingAstrolab : Bool
     , route : Route
-    , astrolabs : Maybe (List AstrolabActivator.Astrolab)
-    , apiHost : String
-    , selectedAstrolab : Maybe AstrolabActivator.Astrolab
+    , brainApiHost : String
     }
 
 
@@ -118,12 +102,8 @@ initialState location =
           , navbarState = navbarState
           , uploadLogsModalState = Bootstrap.Modal.hiddenState
           , uploadLogsInFlight = False
-          , loadingAstrolabs = False
-          , activatingAstrolab = False
           , route = parseLocation location
-          , astrolabs = Nothing
-          , apiHost = Configurator.determineApiHost location
-          , selectedAstrolab = Nothing
+          , brainApiHost = Configurator.determineBrainHost location
           }
         , navbarCmd
         )
@@ -153,12 +133,6 @@ type Msg
     | NavbarMsg Bootstrap.Navbar.State
     | UploadLogsModalMsg Bootstrap.Modal.State
     | UploadLogs
-      -- Astrolab-specific messages:
-    | LoadAstrolabs
-    | LoadAstrolabsComplete (Result Http.Error (List JsonApi.Resource))
-    | SelectAstrolab (Maybe AstrolabActivator.Astrolab)
-    | ActivateAstrolab
-    | ActivateAstrolabComplete (Result Http.Error JsonApi.Resource)
 
 
 applicationFromName : String -> List ViewRunApplication.RunningApplication -> Maybe ViewRunApplication.RunningApplication
@@ -247,7 +221,7 @@ update message model =
 
         DetermineRunningApplications ->
             ( model
-            , Http.send HandleDetermineRunningApplications (determineRunningApplications model.selectedAstrolab)
+            , Http.send HandleDetermineRunningApplications (determineRunningApplications model)
             )
 
         HandleDetermineRunningApplications (Ok running_applications_list) ->
@@ -258,7 +232,7 @@ update message model =
 
         DetermineRunningWebApplications ->
             ( model
-            , Http.send HandleDetermineRunningWebApplications (determineRunningWebApplications model.selectedAstrolab)
+            , Http.send HandleDetermineRunningWebApplications (determineRunningWebApplications model)
             )
 
         HandleDetermineRunningWebApplications (Ok running_web_applications_list) ->
@@ -269,7 +243,7 @@ update message model =
 
         StartApplication docker_image ->
             ( model
-            , Http.send HandleStartApplication (startApplication model.selectedAstrolab docker_image)
+            , Http.send HandleStartApplication (startApplication model docker_image)
             )
 
         HandleStartApplication (Ok response) ->
@@ -280,7 +254,7 @@ update message model =
 
         StopApplication docker_image ->
             ( model
-            , Http.send HandleStopApplication (stopApplication model.selectedAstrolab docker_image)
+            , Http.send HandleStopApplication (stopApplication model docker_image)
             )
 
         HandleStopApplication (Ok response) ->
@@ -291,7 +265,7 @@ update message model =
 
         CleanApplication docker_image ->
             ( model
-            , Http.send HandleCleanApplication (cleanApplication model.selectedAstrolab docker_image)
+            , Http.send HandleCleanApplication (cleanApplication model docker_image)
             )
 
         HandleCleanApplication (Ok response) ->
@@ -309,37 +283,10 @@ update message model =
         LogsUploaded (Err error) ->
             ( { model | uploaded_log_url = (toString error), uploadLogsInFlight = False }, Cmd.none )
 
-        LoadAstrolabs ->
-            ( { model | loadingAstrolabs = True }, (AstrolabActivator.loadAstrolabs model LoadAstrolabsComplete) )
-
-        LoadAstrolabsComplete (Ok resources) ->
-            ( { model
-                | loadingAstrolabs = False
-                , astrolabs = AstrolabActivator.parseAstrolabs resources
-              }
-            , Cmd.none
-            )
-
-        LoadAstrolabsComplete (Err error) ->
-            Debug.log ("Error: " ++ toString error)
-                ( { model | loadingAstrolabs = False, astrolabs = Nothing }, Cmd.none )
-
-        SelectAstrolab astrolab ->
-            ({ model | selectedAstrolab = astrolab }
-                |> update DetermineRunningApplications
-            )
-
-        ActivateAstrolab ->
-            model |> update NoOp
-
-        ActivateAstrolabComplete (Ok output) ->
-            model |> update NoOp
-
-        _ ->
-            model |> update NoOp
 
 
-
+--        _ ->
+--            model |> update NoOp
 -- DECODERS
 
 
@@ -357,13 +304,7 @@ uploadLogs model =
                 |> Http.jsonBody
 
         url =
-            (case model.selectedAstrolab of
-                Just astrolab ->
-                    astrolab.local_endpoint ++ "/api/upload_logs"
-
-                Nothing ->
-                    "http://localhost"
-            )
+            (model.brainApiHost ++ "/api/upload_logs")
     in
         Http.post url body logsUploadedDecoder
             |> Http.send LogsUploaded
@@ -386,16 +327,10 @@ determineRunningApplicationsResponseDecoder =
     Json.Decode.list runningApplicationDecoder
 
 
-determineRunningApplications : Maybe AstrolabActivator.Astrolab -> Http.Request (List ViewRunApplication.RunningApplication)
-determineRunningApplications maybe_astrolab =
+determineRunningApplications : Model -> Http.Request (List ViewRunApplication.RunningApplication)
+determineRunningApplications model =
     Http.get
-        (case maybe_astrolab of
-            Just astrolab ->
-                astrolab.local_endpoint ++ "/api/running_xapplications"
-
-            Nothing ->
-                "http://localhost"
-        )
+        (model.brainApiHost ++ "/api/running_xapplications")
         determineRunningApplicationsResponseDecoder
 
 
@@ -412,16 +347,10 @@ determineRunningWebApplicationsResponseDecoder =
     Json.Decode.list runningWebApplicationDecoder
 
 
-determineRunningWebApplications : Maybe AstrolabActivator.Astrolab -> Http.Request (List ViewRunWebApplication.RunningWebApplication)
-determineRunningWebApplications maybe_astrolab =
+determineRunningWebApplications : Model -> Http.Request (List ViewRunWebApplication.RunningWebApplication)
+determineRunningWebApplications model =
     Http.get
-        (case maybe_astrolab of
-            Just astrolab ->
-                astrolab.local_endpoint ++ "/api/running_webapplications"
-
-            Nothing ->
-                "http://localhost"
-        )
+        (model.brainApiHost ++ "/api/running_webapplications")
         determineRunningWebApplicationsResponseDecoder
 
 
@@ -435,44 +364,26 @@ applicationSpecifierResponseDecoder =
     Json.Decode.field "status" Json.Decode.string
 
 
-startApplication : Maybe AstrolabActivator.Astrolab -> String -> Http.Request String
-startApplication maybe_astrolab docker_image =
+startApplication : Model -> String -> Http.Request String
+startApplication model docker_image =
     Http.post
-        (case maybe_astrolab of
-            Just astrolab ->
-                astrolab.local_endpoint ++ "/api/start_xapplication"
-
-            Nothing ->
-                "http://localhost"
-        )
+        (model.brainApiHost ++ "/api/start_xapplication")
         (Http.stringBody "application/json" <| Json.Encode.encode 0 <| applicationSpecifierEncoder docker_image)
         (applicationSpecifierResponseDecoder)
 
 
-stopApplication : Maybe AstrolabActivator.Astrolab -> String -> Http.Request String
-stopApplication maybe_astrolab docker_image =
+stopApplication : Model -> String -> Http.Request String
+stopApplication model docker_image =
     Http.post
-        (case maybe_astrolab of
-            Just astrolab ->
-                astrolab.local_endpoint ++ "/api/stop_xapplication"
-
-            Nothing ->
-                "http://localhost"
-        )
+        (model.brainApiHost ++ "/api/stop_xapplication")
         (Http.stringBody "application/json" <| Json.Encode.encode 0 <| applicationSpecifierEncoder docker_image)
         (applicationSpecifierResponseDecoder)
 
 
-cleanApplication : Maybe AstrolabActivator.Astrolab -> String -> Http.Request String
-cleanApplication maybe_astrolab docker_image =
+cleanApplication : Model -> String -> Http.Request String
+cleanApplication model docker_image =
     Http.post
-        (case maybe_astrolab of
-            Just astrolab ->
-                astrolab.local_endpoint ++ "/api/clean_xapplication"
-
-            Nothing ->
-                "http://localhost"
-        )
+        (model.brainApiHost ++ "/api/clean_xapplication")
         (Http.stringBody "application/json" <| Json.Encode.encode 0 <| applicationSpecifierEncoder docker_image)
         (applicationSpecifierResponseDecoder)
 
@@ -499,14 +410,8 @@ view model =
     let
         viewServiceEmbed =
             case model.route of
-                ActivateAstrolabRoute ->
-                    AstrolabActivator.view ( model, SelectAstrolab )
-
                 HomeRoute ->
                     ViewAbout.view
-
-                GettingStartedRoute ->
-                    ViewGettingStarted.view
 
                 RunApplicationRoute ->
                     ViewRunApplication.view ( StartApplication, StopApplication, CleanApplication )
@@ -555,7 +460,7 @@ view model =
                 , Html.Attributes.href "/font-awesome-4.7.0.min.css"
                 ]
                 []
-            , ViewNavigation.view ( NavbarMsg, model, ApplicationSelect, WebApplicationSelect, UploadLogsModalMsg, LoadAstrolabs, SelectAstrolab )
+            , ViewNavigation.view ( NavbarMsg, model, ApplicationSelect, WebApplicationSelect, UploadLogsModalMsg )
             , ViewUploadLogs.viewModal ( UploadLogsModalMsg, model, UploadLogs )
             , viewServiceEmbed
             ]
@@ -569,16 +474,8 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
         [ Bootstrap.Navbar.subscriptions model.navbarState NavbarMsg
-        , (if model.route == ActivateAstrolabRoute then
-            Time.every (astrolabDetectionIntervalInSeconds * Time.second) (always LoadAstrolabs)
-           else
-            Sub.none
-          )
-        , (if model.selectedAstrolab /= Nothing then
-            Time.every (runningApplicationIntervalInSeconds * Time.second) (always DetermineRunningApplications)
-           else
-            Sub.none
-          )
+        , Time.every (runningApplicationIntervalInSeconds * Time.second) (always DetermineRunningApplications)
+        , Time.every (runningApplicationIntervalInSeconds * Time.second) (always DetermineRunningWebApplications)
         ]
 
 

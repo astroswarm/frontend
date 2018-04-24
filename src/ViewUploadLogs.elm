@@ -25,7 +25,7 @@ viewModal ( upload_logs_modal_msg, model, upload_logs_msg ) =
             [ Html.p [] [ Html.text "If you're having trouble, we want to help!" ]
             , Html.p [] [ Html.text "The easiest way to diagnose your problem is for a developer to examine your system logs. These logs help us piece together a timeline of everything that has happened on your Astrolab." ]
             , Bootstrap.Alert.warning
-                [ Html.p [] [ Html.text "Warning: these logs will be uploaded to a public web server where anybody can look at them. If you use AstroSwarm to handle sensitive data, please do not use this feature." ]
+                [ Html.p [] [ Html.text "Warning: these logs will be uploaded to a public web server where anybody can look at them. If you use your Astrolab to handle sensitive data, please do not use this feature." ]
                 ]
             , viewUploadLogsStatus model
             ]

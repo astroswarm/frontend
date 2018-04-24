@@ -7,14 +7,13 @@ import Html.Attributes
 view : Html.Html msg
 view =
     Html.div []
-        [ Html.h1 [] [ Html.text "Welcome to AstroSwarm!" ]
-        , Html.p [] [ Html.text "We're making it easy for anyone to study space and share their findings." ]
+        [ Html.h1 [] [ Html.text "Welcome to Your Astrolab" ]
+        , Html.p [] [ Html.text "Right now you can only communicate with your Astrolab over a Local Area Network. Internet-based control is coming soon, but I have been too busy with feature development to tend to the security concerns that internet-based controls require. I will launch internet-based control as soon as I can do so responsibly; I'm aiming for early June." ]
+        , Html.p [] [ Html.text "The services running on your device are listed in the dropdown menu above. Select any service to control it via a web-based VNC session. All services remain running in the background when you are not viewing them." ]
         , Html.p []
-            [ Html.text "First, we're making it easier for people who already have telescopes to use them and share their photos and data. Have a telescope? You should join us! "
-            , Html.a [ Html.Attributes.href "mailto:robby@freerobby.com" ] [ Html.text "Email Robby" ]
-            , Html.text " for details."
+            [ Html.text "Do you need more help? Please "
+            , Html.a [ Html.Attributes.href "mailto:robby@freerobby.com" ] [ Html.text "email me" ]
+            , Html.text " with any questions you have or difficulties you run into."
             ]
-        , Html.p [] [ Html.text "After we build a community, we'll have a global network of telescopes. We'll use this network to make it easy to collaborate with other astronomers, and to share your findings with the larger world. People who don't have telescopes will be able to use and control them over the internet, and people who can't afford them will be able to participate for free." ]
-        , Html.p [] [ Html.text "Over time, our platform will model how humans observe space, and allow the telescopes to look for things entirely on their own. Because they're networked, they can coordinate to make optimal use of hardware and geographic dispersion, both in search of new discoveries, and to provide around-the-clock coverage of known celestial events and phenomena." ]
-        , Html.p [] [ Html.text "We hope you'll join us to make space study more accessible to everyone, and to learn more about our cosmos than we ever have before." ]
+        , Html.p [] [ Html.text "In order to make your problems easier to debug, I've built a system to automatically upload all the logs from your Astrolab. Please find this tool in the dropdown menu above, and include a link to your logs in your email when seeking help." ]
         ]

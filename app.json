@@ -1,5 +1,0 @@
-{
-  "env": {
-    "ELM_COMPILE": "elm-make src/Main.elm --output index.html --warn --yes"
-  }
-}
