@@ -1,0 +1,18 @@
+FROM danielkun/elm-raspbian-arm32v7
+
+ENV INSTALL_PATH /app
+
+RUN mkdir $INSTALL_PATH
+WORKDIR $INSTALL_PATH
+
+COPY . $INSTALL_PATH
+
+RUN elm-make src/Main.elm --yes --warn --debug --output index.html
+
+RUN apt-get -y update
+RUN apt-get -y install nginx
+RUN ln -sf /dev/stdout /var/log/nginx/access.log && ln -sf /dev/stderr /var/log/nginx/error.log
+RUN cp index.html /var/www/html
+
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]

@@ -10,4 +10,4 @@ WORKDIR $INSTALL_PATH
 
 COPY . $INSTALL_PATH
 
-CMD elm-live src/Main.elm --yes --debug --warn --host=0.0.0.0 --port=8000
+CMD elm-live src/Main.elm --yes --debug --warn --host=0.0.0.0 --port=80
