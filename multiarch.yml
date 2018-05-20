@@ -1,0 +1,13 @@
+---
+image: "astroswarm/frontend:latest"
+manifests:
+  -
+    image: "astroswarm/frontend-x86_64:latest"
+    platform:
+      architecture: amd64
+      os: linux
+  -
+    image: "astroswarm/frontend-armv7l:latest"
+    platform:
+      architecture: arm
+      os: linux

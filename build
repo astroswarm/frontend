@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -e
+
+ARCH=`uname -m`
+echo "Detected architecture: $ARCH."
+
+if [ "$(uname -m)" == "x86_64" ] ; then
+  DOCKERFILE=Dockerfile.development
+elif [ "$(uname -m)" == "armv7l" ] ; then
+  DOCKERFILE=Dockerfile.production
+fi
+
+echo "Setting version."
+VERSION=`date +%Y%m%d`
+echo "Version is $VERSION."
+
+docker build \
+  --file $DOCKERFILE \
+  --tag astroswarm/frontend-$ARCH:$VERSION \
+  --tag astroswarm/frontend-$ARCH:latest \
+ ./
+
+echo "Would you like to push this image now (y/n)?"
+read release
+if [ $release = "y" ]; then
+  echo "Pushing to AstroSwarm registry."
+  docker push astroswarm/frontend-$ARCH:$VERSION
+  docker push astroswarm/frontend-$ARCH:latest
+fi
