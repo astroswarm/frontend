@@ -1,0 +1,9 @@
+#!/bin/bash
+
+echo "Building development image..."
+docker build --file Dockerfile.development -t astroswarm/frontend_development ./
+echo "Starting docker container. Visit http://localhost:9000 after launch. Press CTRL+C to quit."
+docker run --rm -t -p 9000:80 -p 35729:35729 -v $(pwd):/app astroswarm/frontend_development
+echo "Cleaning up..."
+docker rmi astroswarm/frontend_development
+echo "Done."
