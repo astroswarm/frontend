@@ -16,6 +16,7 @@ import Time exposing (Time)
 import UrlParser exposing ((</>))
 import Configurator
 import ViewAbout
+import ViewConfigureWifi
 import ViewNavigation
 import ViewRunApplication
 import ViewRunWebApplication
@@ -30,6 +31,7 @@ type Route
     | ApplicationRoute String
     | WebApplicationRoute String
     | RunApplicationRoute
+    | ConfigureWifiRoute
     | UploadLogsRoute
     | NotFoundRoute
 
@@ -41,6 +43,7 @@ matchers =
         , UrlParser.map RunApplicationRoute (UrlParser.s "run-application")
         , UrlParser.map ApplicationRoute (UrlParser.s "applications" </> UrlParser.string)
         , UrlParser.map WebApplicationRoute (UrlParser.s "webapplications" </> UrlParser.string)
+        , UrlParser.map ConfigureWifiRoute (UrlParser.s "configure-wifi")
         , UrlParser.map UploadLogsRoute (UrlParser.s "upload-logs")
         ]
 
@@ -76,6 +79,14 @@ type alias Model =
     , runningWebApplications : List ViewRunWebApplication.RunningWebApplication
     , uploaded_log_url : String
     , navbarState : Bootstrap.Navbar.State
+    , configureWifiModalState : Bootstrap.Modal.State
+    , addWifiNetworkInFlight : Bool
+    , addWifiNetworkFormSsid : String
+    , addWifiNetworkFormKey : String
+    , removeWifiNetworkInFlight : Bool
+    , removeWifiNetworkSelectedSsid : String
+    , getWifiNetworksInFlight : Bool
+    , wifiNetworks : List String
     , uploadLogsModalState : Bootstrap.Modal.State
     , uploadLogsInFlight : Bool
     , route : Route
@@ -100,6 +111,14 @@ initialState location =
           , runningWebApplications = []
           , uploaded_log_url = ""
           , navbarState = navbarState
+          , configureWifiModalState = Bootstrap.Modal.hiddenState
+          , addWifiNetworkInFlight = False
+          , addWifiNetworkFormSsid = ""
+          , addWifiNetworkFormKey = ""
+          , removeWifiNetworkInFlight = False
+          , removeWifiNetworkSelectedSsid = ""
+          , getWifiNetworksInFlight = True
+          , wifiNetworks = []
           , uploadLogsModalState = Bootstrap.Modal.hiddenState
           , uploadLogsInFlight = False
           , route = parseLocation location
@@ -107,10 +126,6 @@ initialState location =
           }
         , navbarCmd
         )
-
-
-
--- Update
 
 
 type Msg
@@ -131,8 +146,17 @@ type Msg
     | WebApplicationSelect ViewRunWebApplication.RunningWebApplication
     | LogsUploaded (Result Http.Error String)
     | NavbarMsg Bootstrap.Navbar.State
-    | UploadLogsModalMsg Bootstrap.Modal.State
+    | ConfigureWifiModalMsg Bootstrap.Modal.State
+    | AddWifiNetwork
+    | AddWifiNetworkSetFormSsid String
+    | AddWifiNetworkSetFormKey String
+    | WifiNetworkAdded (Result Http.Error String)
+    | RemoveWifiNetwork String
+    | WifiNetworkRemoved (Result Http.Error String)
+    | GetWifiNetworks
+    | WifiNetworksGotten (Result Http.Error (List String))
     | UploadLogs
+    | UploadLogsModalMsg Bootstrap.Modal.State
 
 
 applicationFromName : String -> List ViewRunApplication.RunningApplication -> Maybe ViewRunApplication.RunningApplication
@@ -274,6 +298,73 @@ update message model =
         HandleCleanApplication (Err err) ->
             ( model, Cmd.none )
 
+        ------------------------
+        -- Wifi Configuration --
+        ------------------------
+        ConfigureWifiModalMsg state ->
+            if state == Bootstrap.Modal.visibleState then
+                ({ model | configureWifiModalState = state } |> update GetWifiNetworks)
+            else
+                ( { model | configureWifiModalState = state }, Cmd.none )
+
+        AddWifiNetwork ->
+            ( { model | addWifiNetworkInFlight = True }, addWifiNetwork model )
+
+        AddWifiNetworkSetFormSsid ssid ->
+            ( { model | addWifiNetworkFormSsid = ssid }, Cmd.none )
+
+        AddWifiNetworkSetFormKey key ->
+            ( { model | addWifiNetworkFormKey = key }, Cmd.none )
+
+        WifiNetworkAdded (Ok status) ->
+            ({ model
+                | addWifiNetworkInFlight = False
+                , addWifiNetworkFormSsid = ""
+                , addWifiNetworkFormKey = ""
+             }
+                |> update GetWifiNetworks
+            )
+
+        WifiNetworkAdded (Err error) ->
+            ( { model | addWifiNetworkInFlight = False }, Cmd.none )
+
+        -- Problem: model gets changed AFTER removeWifiModel; need to flip that order or pass ssid directly in
+        RemoveWifiNetwork ssid ->
+            ( { model
+                | removeWifiNetworkSelectedSsid = ssid
+                , removeWifiNetworkInFlight = True
+              }
+            , removeWifiNetwork model ssid
+            )
+
+        WifiNetworkRemoved (Ok status) ->
+            ({ model
+                | removeWifiNetworkInFlight = False
+                , removeWifiNetworkSelectedSsid = ""
+             }
+                |> update GetWifiNetworks
+            )
+
+        WifiNetworkRemoved (Err error) ->
+            ( { model
+                | removeWifiNetworkInFlight = False
+                , removeWifiNetworkSelectedSsid = ""
+              }
+            , Cmd.none
+            )
+
+        GetWifiNetworks ->
+            ( { model | getWifiNetworksInFlight = True }, getWifiNetworks model )
+
+        WifiNetworksGotten (Ok latest_wifi_networks) ->
+            ( { model | wifiNetworks = latest_wifi_networks, getWifiNetworksInFlight = False }, Cmd.none )
+
+        WifiNetworksGotten (Err error) ->
+            ( { model | getWifiNetworksInFlight = False }, Cmd.none )
+
+        -----------------
+        -- Log Uploads --
+        -----------------
         UploadLogs ->
             ( { model | uploadLogsInFlight = True }, uploadLogs model )
 
@@ -287,7 +378,66 @@ update message model =
 
 --        _ ->
 --            model |> update NoOp
+--
 -- DECODERS
+--
+
+
+wifiNetworksGottenDecoder : Json.Decode.Decoder (List String)
+wifiNetworksGottenDecoder =
+    Json.Decode.list Json.Decode.string
+
+
+wifiNetworkAddedDecoder : Json.Decode.Decoder String
+wifiNetworkAddedDecoder =
+    Json.Decode.field "status" Json.Decode.string
+
+
+wifiNetworkRemovedDecoder : Json.Decode.Decoder String
+wifiNetworkRemovedDecoder =
+    Json.Decode.field "status" Json.Decode.string
+
+
+addWifiNetwork : Model -> Cmd Msg
+addWifiNetwork model =
+    let
+        body =
+            Json.Encode.object
+                [ ( "ssid", Json.Encode.string model.addWifiNetworkFormSsid )
+                , ( "key", Json.Encode.string model.addWifiNetworkFormKey )
+                ]
+                |> Http.jsonBody
+
+        url =
+            (model.brainApiHost ++ "/api/add_wifi_network")
+    in
+        Http.post url body wifiNetworkAddedDecoder
+            |> Http.send WifiNetworkAdded
+
+
+removeWifiNetwork : Model -> String -> Cmd Msg
+removeWifiNetwork model ssid =
+    let
+        body =
+            Json.Encode.object
+                [ ( "ssid", Json.Encode.string ssid ) ]
+                |> Http.jsonBody
+
+        url =
+            (model.brainApiHost ++ "/api/remove_wifi_network")
+    in
+        Http.post url body wifiNetworkRemovedDecoder
+            |> Http.send WifiNetworkRemoved
+
+
+getWifiNetworks : Model -> Cmd Msg
+getWifiNetworks model =
+    let
+        url =
+            (model.brainApiHost ++ "/api/wifi_networks")
+    in
+        Http.get url wifiNetworksGottenDecoder
+            |> Http.send WifiNetworksGotten
 
 
 logsUploadedDecoder : Json.Decode.Decoder String
@@ -460,7 +610,8 @@ view model =
                 , Html.Attributes.href "/font-awesome-4.7.0.min.css"
                 ]
                 []
-            , ViewNavigation.view ( NavbarMsg, model, ApplicationSelect, WebApplicationSelect, UploadLogsModalMsg )
+            , ViewNavigation.view ( NavbarMsg, model, ApplicationSelect, WebApplicationSelect, ConfigureWifiModalMsg, UploadLogsModalMsg )
+            , ViewConfigureWifi.viewModal ( ConfigureWifiModalMsg, model, AddWifiNetwork, AddWifiNetworkSetFormSsid, AddWifiNetworkSetFormKey, RemoveWifiNetwork )
             , ViewUploadLogs.viewModal ( UploadLogsModalMsg, model, UploadLogs )
             , viewServiceEmbed
             ]

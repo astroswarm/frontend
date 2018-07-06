@@ -20,9 +20,10 @@ view :
     , ViewRunApplication.RunningApplication -> msg
     , ViewRunWebApplication.RunningWebApplication -> msg
     , Bootstrap.Modal.State -> msg
+    , Bootstrap.Modal.State -> msg
     )
     -> Html.Html msg
-view ( navbar_msg, model, application_select_msg, web_application_select_msg, upload_logs_modal_msg ) =
+view ( navbar_msg, model, application_select_msg, web_application_select_msg, configure_wifi_modal_msg, upload_logs_modal_msg ) =
     Html.div []
         [ Bootstrap.Navbar.config navbar_msg
             |> Bootstrap.Navbar.withAnimation
@@ -50,6 +51,14 @@ view ( navbar_msg, model, application_select_msg, web_application_select_msg, up
                                         [ Html.text application.name ]
                                 )
                                 model.runningApplications
+                              )
+                            , ([ Bootstrap.Navbar.dropdownDivider
+                               , Bootstrap.Navbar.dropdownItem
+                                    [ Html.Events.onClick
+                                        (configure_wifi_modal_msg Bootstrap.Modal.visibleState)
+                                    ]
+                                    [ Html.text "Configure Wifi..." ]
+                               ]
                               )
                             , ([ Bootstrap.Navbar.dropdownDivider
                                , Bootstrap.Navbar.dropdownItem
