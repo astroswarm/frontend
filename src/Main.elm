@@ -542,9 +542,10 @@ cleanApplication model docker_image =
 -- VIEW
 
 
-vncIframeSrcForApplication : ViewRunApplication.RunningApplication -> String
-vncIframeSrcForApplication app =
-    "http://novnc.com/noVNC/vnc.html?autoconnect=true&reconnect=true&host="
+vncIframeSrcForApplication : Model -> ViewRunApplication.RunningApplication -> String
+vncIframeSrcForApplication model app =
+    model.brainApiHost
+        ++ "/vendor/noVNC/vnc.html?autoconnect=true&reconnect=true&host="
         ++ app.local_websockify_hostname
         ++ "&port="
         ++ toString app.local_websockify_port
@@ -571,7 +572,7 @@ view model =
                         Just application ->
                             Html.iframe
                                 [ Html.Attributes.src
-                                    (vncIframeSrcForApplication application)
+                                    (vncIframeSrcForApplication model application)
                                 , Html.Attributes.height 600
                                 , Html.Attributes.width 1000
                                 ]
